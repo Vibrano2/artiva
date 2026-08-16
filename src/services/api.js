@@ -77,10 +77,7 @@ export const ApiService = {
   },
 
   // 2. Auth - Verify OTP
-  async verifyOtp(phone, otp, role = 'client') {
-    // Temporary bypass for local development without Firebase config
-    const idToken = `TEST_TOKEN_${Date.now()}`;
-    
+  async verifyOtp(idToken, role = 'client') {
     const data = await fetchWithAuth('/auth/phone/verify-otp', {
       method: 'POST',
       body: JSON.stringify({ 

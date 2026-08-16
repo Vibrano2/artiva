@@ -1,27 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services/api';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Phone, ShieldCheck, ArrowRight, CheckSquare, Square, RefreshCw, KeyRound } from 'lucide-react';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 export function AuthScreen({ role = 'client' }) {
   const { navigateTo, setCurrentUser, setUserRole, showToast } = useApp();
 
   const [step, setStep] = useState(1); // 1: Phone, 2: OTP
-  const [phone, setPhone] = useState('8031234567');
+  const [phone, setPhone] = useState('+2348031234567');
   const [otp, setOtp] = useState('');
   const [ndprConsent, setNdprConsent] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [timer, setTimer] = useState(30);
 
-  const fullPhoneNumber = `+234${phone.replace(/^0+/, '')}`;
+  useEffect(() => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+      });
+    }
+  }, []);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!phone || phone.length < 9) {
-      setError('Please enter a valid 10-digit Nigerian phone number.');
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid phone number.');
       return;
     }
     if (!ndprConsent) {
@@ -33,14 +43,22 @@ export function AuthScreen({ role = 'client' }) {
     setLoading(true);
 
     try {
-      await ApiService.sendOtp(fullPhoneNumber);
+      const appVerifier = window.recaptchaVerifier;
+      const confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
+      window.confirmationResult = confirmationResult;
+      
       setLoading(false);
       setStep(2);
-      showToast(`OTP sent to ${fullPhoneNumber}`, 'success');
+      showToast(`OTP sent to ${phone}`, 'success');
       startTimer();
     } catch (err) {
       setLoading(false);
       setError(err.message);
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.render().then(function(widgetId) {
+          window.grecaptcha.reset(widgetId);
+        });
+      }
     }
   };
 
@@ -68,7 +86,10 @@ export function AuthScreen({ role = 'client' }) {
     setLoading(true);
 
     try {
-      const res = await ApiService.verifyOtp(fullPhoneNumber, otp, role);
+      const result = await window.confirmationResult.confirm(otp);
+      const idToken = await result.user.getIdToken();
+      
+      const res = await ApiService.verifyOtp(idToken, role);
       setLoading(false);
       setCurrentUser(res.user);
       setUserRole(role);
@@ -81,7 +102,7 @@ export function AuthScreen({ role = 'client' }) {
       }
     } catch (err) {
       setLoading(false);
-      setError(err.message);
+      setError(err.message || 'Invalid OTP code. Please try again.');
     }
   };
 
@@ -108,7 +129,7 @@ export function AuthScreen({ role = 'client' }) {
             <p className="text-xs text-slate-500 mt-1">
               {step === 1 
                 ? 'Instant verification for Life Camp clients & artisans.' 
-                : `We sent a 6-digit OTP code to ${fullPhoneNumber}`}
+                : `We sent a 6-digit OTP code to ${phone}`}
             </p>
           </div>
 
@@ -122,22 +143,19 @@ export function AuthScreen({ role = 'client' }) {
           {step === 1 ? (
             /* STEP 1: PHONE FORM */
             <form onSubmit={handleSendOtp} className="space-y-5">
+              <div id="recaptcha-container"></div>
               <div>
                 <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                  Nigerian Phone Number
+                  Phone Number
                 </label>
-                <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 focus-within:border-[#16858F] focus-within:ring-2 focus-within:ring-[#16858F]/20 overflow-hidden transition-all">
-                  <span className="px-3.5 py-3.5 bg-slate-100 text-slate-700 font-bold text-sm border-r border-slate-200 flex items-center gap-1.5">
-                    <span className="text-base">🇳🇬</span> +234
-                  </span>
-                  <input
-                    type="tel"
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 focus-within:border-[#16858F] focus-within:ring-2 focus-within:ring-[#16858F]/20 overflow-hidden transition-all px-4 py-3">
+                  <PhoneInput
+                    international
+                    defaultCountry="NG"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    placeholder="803 123 4567"
-                    className="w-full px-3 py-3.5 bg-transparent font-medium text-slate-900 text-base focus:outline-none"
-                    maxLength={10}
-                    autoFocus
+                    onChange={setPhone}
+                    className="w-full bg-transparent font-medium text-slate-900 text-base focus:outline-none AuthPhoneInput"
+                    style={{ '--PhoneInput-color--focus': '#16858F' }}
                   />
                 </div>
               </div>

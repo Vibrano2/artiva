@@ -22,6 +22,10 @@ import {
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { auth } from './firebase';
+import { AuthModal } from './components/AuthModal';
 
 type IconProps = { size?: number; className?: string };
 
@@ -100,8 +104,23 @@ function HeroArtwork() {
 }
 
 function App() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
   return (
     <div className="app-shell">
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       <header className="site-header">
         <a href="#home" className="logo-link"><ArtivaMark /></a>
         <nav className="main-nav" aria-label="Main navigation">
@@ -113,8 +132,19 @@ function App() {
           <a href="#about">About Us</a>
         </nav>
         <div className="header-actions">
-          <a className="login-link" href="#login">Log in</a>
-          <a className="signup-link" href="#signup"><CircleUserRound size={16} /> <span>Sign up<small>Phone + OTP</small></span></a>
+          {user ? (
+            <>
+              <span style={{ fontSize: '0.875rem' }}>{user.email}</span>
+              <button onClick={handleLogout} className="login-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Log out</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setIsAuthModalOpen(true)} className="login-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Log in</button>
+              <button onClick={() => setIsAuthModalOpen(true)} className="signup-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <CircleUserRound size={16} /> <span>Sign up</span>
+              </button>
+            </>
+          )}
         </div>
         <button className="mobile-menu" aria-label="Open menu"><Menu size={22} /></button>
       </header>

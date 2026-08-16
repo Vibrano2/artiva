@@ -34,7 +34,7 @@ export function SignUpPage() {
               How will you use Artiva?
             </h1>
             <p className="text-xs text-slate-500">
-              Select your account type to continue with phone verification.
+              Select your account type to continue with email registration.
             </p>
           </div>
 
