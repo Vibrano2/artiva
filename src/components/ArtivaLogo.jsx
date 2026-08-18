@@ -1,14 +1,5 @@
 import React from 'react';
 
-/**
- * Artiva Shield Logo Component
- * - Shield badge with #16858F outer border
- * - Crossed wrench & screwdriver in cobalt blue with gold handles
- * - Gold speed lines to the left of shield
- * - Gold star to the upper right
- * - Wordmark "Artiva" in #16D4C6 bold rounded sans-serif
- * - Optional tagline "verified. fast. protected."
- */
 export function ArtivaLogo({ size = 'md', showWordmark = true, showTagline = false, isSplash = false, lightMode = false }) {
   const sizeClasses = {
     sm: { box: 'w-8 h-8', text: 'text-xl', tagline: 'text-[9px]' },

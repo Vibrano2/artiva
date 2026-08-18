@@ -78,7 +78,6 @@
   }
 }
 
-/* Custom scrollbars for clean UI */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -94,7 +93,6 @@
   background: #94A3B8;
 }
 
-/* Minimum 44x44px touch target utility */
 .touch-target {
   min-width: 44px;
   min-height: 44px;
@@ -103,7 +101,6 @@
   justify-content: center;
 }
 
-/* Active press animation for mobile buttons */
 .btn-press {
   transition: transform 0.1s ease, opacity 0.1s ease;
 }
@@ -112,7 +109,6 @@
   opacity: 0.9;
 }
 
-/* Shimmer keyframe animation for Skeleton Loaders */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -127,10 +123,6 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-
-/* =========================
-       NEUMORPHIC AUTH FLIP CARD
-========================= */
 
 .login-wrapper {
     display: flex;
@@ -439,7 +431,6 @@
     .forgot a { font-size: 9px; }
     .login-form button { width: 180px; height: 40px; font-size: 12px; border-radius: 10px; }
 }
-/* Fix Chrome Autofill Yellow Background */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 

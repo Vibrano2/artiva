@@ -6,7 +6,7 @@ import { ShieldCheck, Lock, CheckCircle2, UserCheck, Wrench, ArrowRight } from '
 
 export function HowItWorksPage() {
   const { navigateTo } = useApp();
-  const [activeTab, setActiveTab] = useState('client'); // 'client' | 'artisan'
+  const [activeTab, setActiveTab] = useState('client');
 
   const clientSteps = [
     { num: 1, title: 'Create / Post a Job', desc: 'Describe your repair issue, trade category, location, and urgency level.' },

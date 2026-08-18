@@ -10,7 +10,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
   const targetJob = job || activeJob;
   const targetArtisan = artisan || activeArtisan;
 
-  const [paymentState, setPaymentState] = useState('summary'); // 'summary' | 'processing' | 'failed' | 'success'
+  const [paymentState, setPaymentState] = useState('summary');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
