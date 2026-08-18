@@ -9,10 +9,10 @@ export function Navbar({ activeTab = 'home' }) {
 
   const navLinks = [
     { id: 'home', label: 'Home', screen: 'home' },
+    { id: 'jobs', label: 'My Jobs', screen: 'jobs' },
     { id: 'find', label: 'Find Artisans', screen: 'find_artisans' },
     { id: 'how', label: 'How It Works', screen: 'how_it_works' },
     { id: 'become', label: 'Become an Artisan', screen: 'become_artisan' },
-    { id: 'jobs', label: 'Jobs', screen: 'jobs_board' },
     { id: 'about', label: 'About Us', screen: 'about_us' },
   ];
 
@@ -22,6 +22,12 @@ export function Navbar({ activeTab = 'home' }) {
       if (userRole === 'artisan') navigateTo('artisan_dash');
       else if (currentUser) navigateTo('client_dash');
       else navigateTo('home');
+    } else if (screen === 'jobs') {
+      if (currentUser) {
+        navigateTo(userRole === 'artisan' ? 'artisan_dash' : 'client_dash');
+      } else {
+        navigateTo('login');
+      }
     } else {
       navigateTo(screen);
     }
@@ -30,8 +36,6 @@ export function Navbar({ activeTab = 'home' }) {
   return (
     <header className="sticky top-0 z-50 bg-dark-bg text-[#E5E7EB] transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[60px] flex items-center justify-between gap-4 border-b border-white/10">
-        
-        {/* Brand Logo */}
         <div 
           className="cursor-pointer flex items-center gap-2 flex-shrink-0"
           onClick={() => handleNavClick('home')}
@@ -39,7 +43,6 @@ export function Navbar({ activeTab = 'home' }) {
           <ArtivaLogo size="md" showWordmark={true} />
         </div>
 
-        {/* Desktop Navigation Links */}
         <nav className="hidden lg:flex items-center gap-6">
           {navLinks.map((link) => {
             const isActive = activeTab === link.id;
@@ -59,7 +62,6 @@ export function Navbar({ activeTab = 'home' }) {
           })}
         </nav>
 
-        {/* Header Action Buttons */}
         <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
           {currentUser ? (
             <div className="flex items-center gap-3">
@@ -94,7 +96,6 @@ export function Navbar({ activeTab = 'home' }) {
           )}
         </div>
 
-        {/* Mobile Menu Hamburger Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="lg:hidden p-2 text-white hover:bg-white/10 rounded-xl transition-colors btn-press"
@@ -104,7 +105,6 @@ export function Navbar({ activeTab = 'home' }) {
         </button>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#0E3B40] border-b border-white/10 px-4 pt-3 pb-6 space-y-3 animate-slide-up">
           <div className="flex flex-col space-y-1">

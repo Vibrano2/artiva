@@ -1,38 +1,55 @@
 import React from 'react';
-import { Cable, Hammer, Paintbrush, Waves, Wrench, Zap } from 'lucide-react';
-
-const tradeIcons = [
-  { Icon: Wrench, position: 'top-[4%] left-[13%]' },
-  { Icon: Zap, position: 'top-[14%] right-[7%]' },
-  { Icon: Hammer, position: 'top-[47%] right-[1%]' },
-  { Icon: Paintbrush, position: 'bottom-[8%] right-[16%]' },
-  { Icon: Cable, position: 'bottom-[3%] left-[28%]' },
-  { Icon: Waves, position: 'top-[48%] left-[1%]' },
-];
+import { Star, ShieldCheck, LockKeyhole, Hammer } from 'lucide-react';
 
 export function HeroBrandMark() {
   return (
-    <div className="hero-brand-mark relative w-full max-w-[440px] aspect-square" aria-label="Artiva artisan services">
-      <div className="hero-brand-atmosphere" aria-hidden="true" />
-      <div className="hero-brand-orbit hero-brand-orbit-one" aria-hidden="true" />
-      <div className="hero-brand-orbit hero-brand-orbit-two" aria-hidden="true" />
+    <div className="relative w-full max-w-[480px] aspect-square flex items-center justify-center animate-fade-in-slow">
+      <div className="absolute inset-0 bg-[#16858F]/10 blur-[60px] rounded-full" aria-hidden="true" />
+      <div className="absolute inset-[15%] bg-[#16D4C6]/10 blur-[40px] rounded-full" aria-hidden="true" />
+      
+      <div className="absolute inset-[10%] rounded-full border border-white/5 animate-spin-slow" style={{ animationDuration: '40s' }} />
+      <div className="absolute inset-[25%] rounded-full border border-white/10 animate-spin-reverse-slow" style={{ animationDuration: '30s' }} />
 
-      {tradeIcons.map(({ Icon, position }, index) => (
-        <div
-          key={index}
-          className={`hero-trade-icon absolute ${position} z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#16858F]/60 bg-[#06151F]/85 text-white sm:h-11 sm:w-11`}
-          aria-hidden="true"
-        >
-          <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" strokeWidth={1.6} />
+      <div className="absolute top-[12%] left-[5%] z-20 animate-float-delayed bg-[#06151F]/60 backdrop-blur-md border border-white/10 p-3 rounded-2xl flex items-center gap-3 shadow-2xl">
+        <div className="w-10 h-10 rounded-full bg-[#FAB804]/20 flex items-center justify-center">
+          <Star className="w-5 h-5 text-[#FAB804] fill-[#FAB804]" />
         </div>
-      ))}
+        <div>
+          <p className="text-white text-sm font-bold font-sans">5.0 Rating</p>
+          <p className="text-muted text-[10px] uppercase tracking-wider font-semibold">Top Artisan</p>
+        </div>
+      </div>
 
-      <div className="absolute inset-[22%] z-20 flex items-center justify-center">
-        <img
-          src="/logo.svg"
-          alt="Artiva shield and crossed-tools mark"
-          className="hero-brand-logo h-full w-full object-contain"
+      <div className="absolute bottom-[20%] right-[2%] z-20 animate-float bg-[#06151F]/60 backdrop-blur-md border border-white/10 p-3 rounded-2xl flex items-center gap-3 shadow-2xl">
+        <div className="w-10 h-10 rounded-full bg-[#16858F]/20 flex items-center justify-center">
+          <LockKeyhole className="w-5 h-5 text-[#16D4C6]" />
+        </div>
+        <div>
+          <p className="text-white text-sm font-bold font-sans">Escrow Locked</p>
+          <p className="text-muted text-[10px] uppercase tracking-wider font-semibold">100% Secured</p>
+        </div>
+      </div>
+
+      <div className="absolute bottom-[5%] left-[8%] z-20 animate-float-more-delayed bg-[#06151F]/60 backdrop-blur-md border border-white/10 p-2.5 rounded-2xl flex items-center gap-3 shadow-2xl">
+        <img 
+          src="https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?auto=format&fit=crop&w=150&q=80" 
+          alt="Artisan" 
+          className="w-11 h-11 rounded-full object-cover border-2 border-[#16858F]"
         />
+        <div className="pr-2">
+          <p className="text-white text-sm font-bold font-sans">Sunday O.</p>
+          <p className="text-[#16D4C6] text-[11px] font-semibold flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3" />
+            Verified Plumber
+          </p>
+        </div>
+      </div>
+
+      <div className="relative z-10 w-[55%] h-[55%] bg-gradient-to-tr from-[#16858F]/20 to-[#16D4C6]/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10 shadow-[0_0_80px_rgba(22,212,198,0.2)]">
+        <div className="w-[65%] h-[65%] bg-gradient-to-tr from-[#0E3B40] to-[#16858F] rounded-full flex items-center justify-center shadow-inner relative overflow-hidden">
+          <Hammer className="w-16 h-16 text-white drop-shadow-md z-10" strokeWidth={1.5} />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService } from '../services/api';
+import { ApiService } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
@@ -33,7 +33,6 @@ export function MatchListScreen({ job }) {
   };
 
   const handleSelectArtisan = (artisan) => {
-    // Proceed to Paystack Escrow Checkout Modal
     navigateTo('checkout', { job: targetJob, artisan });
   };
 
@@ -43,12 +42,11 @@ export function MatchListScreen({ job }) {
       <OfflineBanner onRetry={fetchMatches} />
 
       <main className="max-w-md mx-auto px-4 py-4 space-y-4">
-        {/* Job Summary Banner */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-1.5 text-xs text-[#16858F] font-bold">
               <MapPin className="w-3.5 h-3.5" />
-              <span>{targetJob?.location || 'Life Camp, Abuja'}</span>
+              <span>{targetJob?.location || 'Your Estate'}</span>
             </div>
             <p className="text-xs font-semibold text-[#0E3B40] mt-0.5 line-clamp-1">
               "{targetJob?.description || 'Trade job request'}"
@@ -59,13 +57,12 @@ export function MatchListScreen({ job }) {
           </span>
         </div>
 
-        {/* Header section */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-[#0E3B40] font-['Outfit']">
               Ranked Verified Matches
             </h2>
-            <p className="text-xs text-slate-500">Sorted by proximity in Life Camp & reputation</p>
+            <p className="text-xs text-slate-500">Sorted by proximity & reputation</p>
           </div>
 
           <button
@@ -77,11 +74,9 @@ export function MatchListScreen({ job }) {
           </button>
         </div>
 
-        {/* Match List Content */}
         {loading ? (
           <SkeletonLoader type="card" count={3} />
         ) : matches.length === 0 ? (
-          /* EMPTY STATE SCREEN (Explicit Inclusion) */
           <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center space-y-4 shadow-sm animate-fade-in">
             <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-8 h-8" />
@@ -91,7 +86,7 @@ export function MatchListScreen({ job }) {
                 No Verified Artisans Available Right Now
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                We currently don't have an available {targetJob?.trade} artisan within immediate radius in Life Camp.
+                We currently don't have an available {targetJob?.trade} artisan within your immediate radius.
               </p>
             </div>
 

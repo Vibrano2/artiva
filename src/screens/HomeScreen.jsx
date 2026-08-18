@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { HeroBrandMark } from '../components/HeroBrandMark';
+import { HeroGraphic } from '../components/HeroGraphic';
 import { useApp } from '../context/AppContext';
 import { ArrowRight, FilePenLine, HardHat, LockKeyhole, ShieldCheck, Tag, UsersRound } from 'lucide-react';
 
@@ -9,14 +9,11 @@ export function HomeScreen() {
   const { navigateTo } = useApp();
 
   return (
-    <div className="artiva-dark-canvas min-h-screen flex flex-col justify-between text-[#e0e2e4] relative">
+    <div className="artiva-dark-canvas min-h-screen flex flex-col justify-between text-[#e0e2e4] relative overflow-hidden">
       <Navbar activeTab="home" />
 
       <main className="flex-1">
-        {/* HERO SECTION */}
         <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-16 sm:pt-20 lg:pt-24 lg:pb-20 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
-          
-          {/* Left Content */}
           <div className="w-full lg:w-1/2 space-y-8 z-10">
             <div className="space-y-4">
               <p className="text-[#16D4C6] font-semibold text-[11px] sm:text-[13px] tracking-wide uppercase">
@@ -50,7 +47,6 @@ export function HomeScreen() {
               </button>
             </div>
 
-            {/* Trust Tags */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-5 pt-5">
               <div className="flex items-start gap-3">
                 <ShieldCheck aria-hidden="true" className="w-5 h-5 mt-0.5 flex-shrink-0 text-[#16D4C6]" strokeWidth={1.75} />
@@ -78,13 +74,13 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {/* Right Image (Complex Orbit Layout) */}
-          <div className="w-full lg:w-1/2 relative flex justify-center lg:justify-end items-center z-0 min-h-[300px] sm:min-h-[390px] lg:min-h-[470px] mt-4 lg:mt-0">
-            <HeroBrandMark />
+          <div className="w-full lg:w-1/2 relative flex justify-center items-center z-0 min-h-[280px] sm:min-h-[390px] lg:min-h-[500px] mt-4 lg:mt-0 overflow-hidden sm:overflow-visible">
+            <div className="transform scale-[0.9] xs:scale-[1.0] sm:scale-[1.2] lg:scale-[1.5] origin-center transition-transform">
+              <HeroGraphic />
+            </div>
           </div>
         </section>
 
-        {/* HOW ARTIVA WORKS */}
         <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
           <div className="text-center space-y-3 mb-12">
             <h2 className="text-[23px] font-bold font-sans text-[#e0e2e4]">How Artiva Works</h2>
@@ -92,10 +88,7 @@ export function HomeScreen() {
           </div>
 
           <div className="relative">
-            {/* Dashed line connecting steps (desktop only) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left relative z-10 max-w-4xl mx-auto">
-              
-              {/* Step 1 */}
               <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
                 <div className="w-[50px] h-[50px] rounded-xl border border-[#16858F] bg-dark-surface flex items-center justify-center flex-shrink-0">
                   <FilePenLine aria-hidden="true" strokeWidth={1.75} className="w-6 h-6 text-[#16D4C6]" />
@@ -111,7 +104,6 @@ export function HomeScreen() {
                 </div>
               </div>
 
-              {/* Step 2 */}
               <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
                 <div className="w-[50px] h-[50px] rounded-xl border border-[#16858F] bg-dark-surface flex items-center justify-center flex-shrink-0">
                   <UsersRound aria-hidden="true" strokeWidth={1.75} className="w-6 h-6 text-[#16D4C6]" />
@@ -127,7 +119,6 @@ export function HomeScreen() {
                 </div>
               </div>
 
-              {/* Step 3 */}
               <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
                 <div className="w-[50px] h-[50px] rounded-xl border border-[#16858F] bg-dark-surface flex items-center justify-center flex-shrink-0">
                   <ShieldCheck aria-hidden="true" strokeWidth={1.75} className="w-6 h-6 text-[#16D4C6]" />
@@ -142,11 +133,9 @@ export function HomeScreen() {
                   </p>
                 </div>
               </div>
-
             </div>
           </div>
 
-          {/* Escrow Banner */}
           <div className="mt-12 mx-auto w-full max-w-[676px] min-h-[57px] bg-dark-surface border border-[#16858F] rounded-[6px] p-4 flex items-center justify-center gap-4 shadow-sm">
             <div className="w-8 h-8 rounded-full bg-dark-bg flex items-center justify-center flex-shrink-0">
               <LockKeyhole aria-hidden="true" strokeWidth={1.75} className="w-4 h-4 text-[#16D4C6]" />
@@ -160,7 +149,6 @@ export function HomeScreen() {
           </div>
         </section>
 
-        {/* ARTISAN PROMO SECTION */}
         <section className="w-full bg-dark-surface border-t border-b border-[#16858F]/30 py-24 px-4 sm:px-6 lg:px-8 text-center mt-12">
           <div className="max-w-2xl mx-auto space-y-6">
             <h2 className="text-3xl sm:text-4xl font-extrabold font-sans text-white">
@@ -179,7 +167,6 @@ export function HomeScreen() {
             </div>
           </div>
         </section>
-
       </main>
 
       <Footer />

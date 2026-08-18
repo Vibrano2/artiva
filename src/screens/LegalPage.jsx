@@ -41,7 +41,12 @@ export function LegalPage({ type }) {
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2">{description}</p>
             </article>
           ))}
-          <p className="text-xs text-slate-500 text-center pt-2">Detailed legal terms will be published before public launch.</p>
+          <p className="text-xs text-slate-500 text-center pt-2">
+            For legal inquiries, terms compliance, or NDPR data protection requests, please contact{' '}
+            <a href="mailto:legal@artiva.ng" className="text-[#16858F] font-semibold hover:underline">
+              legal@artiva.ng
+            </a>.
+          </p>
         </section>
       </main>
       <Footer />

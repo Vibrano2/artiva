@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService, TradeServicesMap, LifeCampLocations } from '../services/api';
+import { ApiService, ALL_TRADES, TARGET_LOCATIONS } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Wrench, MapPin, Clock, DollarSign, Image, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -9,14 +9,15 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
   const { navigateTo, currentUser, showToast } = useApp();
 
   const [trade, setTrade] = useState(initialTrade);
-  const [location, setLocation] = useState(LifeCampLocations[0]);
+  const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [urgency, setUrgency] = useState('Today');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('5000');
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const trades = Object.keys(TradeServicesMap);
+  const trades = ALL_TRADES;
 
   const handleSubmitJob = async (e) => {
     e.preventDefault();
@@ -35,12 +36,12 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
         urgency,
         description,
         budget: Number(budget),
+        photos,
         client_uid: currentUser?.uid || 'user_demo_client'
       });
 
       setLoading(false);
       showToast('Job request posted successfully!', 'success');
-      // Navigate immediately to Match List screen per API contract
       navigateTo('match_list', { job: res.job });
     } catch (err) {
       setLoading(false);
@@ -55,7 +56,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
 
       <main className="max-w-md mx-auto px-4 py-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-card animate-fade-in space-y-6">
-          {/* Header Banner */}
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
             <div className="w-10 h-10 rounded-2xl bg-[#E8F5F6] text-[#16858F] flex items-center justify-center flex-shrink-0">
               <Wrench className="w-5 h-5 stroke-[2.5]" />
@@ -75,7 +75,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
           )}
 
           <form onSubmit={handleSubmitJob} className="space-y-5">
-            {/* 1. Trade Category */}
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
                 1. Select Trade
@@ -91,10 +90,9 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               </select>
             </div>
 
-            {/* 2. Location in Life Camp */}
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                2. Location in Life Camp
+                2. Location in Lagos
               </label>
               <div className="relative">
                 <select
@@ -102,7 +100,7 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full p-3.5 pl-10 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
                 >
-                  {LifeCampLocations.map((loc) => (
+                  {TARGET_LOCATIONS.map((loc) => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
@@ -110,7 +108,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               </div>
             </div>
 
-            {/* 3. Urgency Selection */}
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
                 3. Urgency Level
@@ -133,7 +130,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               </div>
             </div>
 
-            {/* 4. Problem Description */}
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
                 4. Job Details / Issue Description
@@ -141,14 +137,13 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Water leak under kitchen sink in Brains & Hammers estate flat. Needs urgent pipe repair."
+                placeholder="e.g. Water leak under kitchen sink in VGC estate flat. Needs urgent pipe repair."
                 rows={3}
                 className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
                 required
               />
             </div>
 
-            {/* 5. Estimated Budget */}
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
                 5. Estimated Budget (₦)
@@ -166,7 +161,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               <p className="text-[11px] text-slate-400 mt-1">Match fee is ₦1,500 held safely in escrow until completion.</p>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}

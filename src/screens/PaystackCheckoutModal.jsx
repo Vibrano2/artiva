@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService } from '../services/api';
+import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Lock, ShieldCheck, CreditCard, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react';
 
@@ -22,23 +22,12 @@ export function PaystackCheckoutModal({ job, artisan }) {
     setErrorMsg(null);
 
     try {
-      // Step 1: Initialize payment per contract
-      const payRes = await ApiService.initializePayment(targetJob.job_id, targetArtisan.uid);
+      await ApiService.initializePayment(targetJob.job_id, targetArtisan.uid);
 
-      // Simulate Paystack processing delay (1.5 seconds)
       setTimeout(async () => {
-        try {
-          // Step 2: Unlock chat per contract right after payment confirms held
-          await ApiService.unlockChat(targetJob.job_id);
-
-          setLoading(false);
-          setPaymentState('success');
-          showToast('Match fee held in escrow successfully!', 'success');
-        } catch (err) {
-          setLoading(false);
-          setPaymentState('failed');
-          setErrorMsg(err.message);
-        }
+        setLoading(false);
+        setPaymentState('success');
+        showToast('Match fee held in escrow successfully!', 'success');
       }, 1500);
 
     } catch (err) {
@@ -56,9 +45,8 @@ export function PaystackCheckoutModal({ job, artisan }) {
     }, 1000);
   };
 
-  const handleOpenChatScreen = () => {
-    const matchId = `match_${targetJob.job_id}_${targetArtisan.uid}`;
-    navigateTo('chat', { job: targetJob, artisan: targetArtisan, matchId });
+  const handleOpenChat = () => {
+    navigateTo('chat_screen', { job: targetJob, artisan: targetArtisan });
   };
 
   return (
@@ -68,8 +56,6 @@ export function PaystackCheckoutModal({ job, artisan }) {
 
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1 flex flex-col justify-center">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-card animate-fade-in space-y-5">
-          
-          {/* Top Paystack & Artiva Security Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-[#16858F]" />
@@ -82,7 +68,6 @@ export function PaystackCheckoutModal({ job, artisan }) {
             </span>
           </div>
 
-          {/* 1. Summary View */}
           {paymentState === 'summary' && (
             <div className="space-y-5">
               <div className="bg-[#F4F8F8] p-4 rounded-2xl border border-slate-200/80 space-y-3">
@@ -96,7 +81,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
                     <h3 className="font-bold text-[#0E3B40] text-sm">
                       {targetArtisan?.first_name} {targetArtisan?.last_name}
                     </h3>
-                    <p className="text-xs text-[#16858F] font-semibold">{targetArtisan?.trade} • Life Camp</p>
+                    <p className="text-xs text-[#16858F] font-semibold">{targetArtisan?.trade} • {targetArtisan?.location || 'Verified Artisan'}</p>
                   </div>
                 </div>
 
@@ -118,7 +103,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
                   className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
                 >
                   <Lock className="w-4 h-4 stroke-[2.5]" />
-                  <span>Pay ₦{matchFee.toLocaleString()} & Unlock Chat</span>
+                  <span>Pay ₦{matchFee.toLocaleString()} & Open Secure Chat</span>
                 </button>
 
                 <button
@@ -131,7 +116,6 @@ export function PaystackCheckoutModal({ job, artisan }) {
             </div>
           )}
 
-          {/* 2. Processing Loading View */}
           {paymentState === 'processing' && (
             <div className="py-12 text-center space-y-4">
               <div className="w-14 h-14 border-4 border-[#16858F] border-t-transparent rounded-full animate-spin mx-auto" />
@@ -142,7 +126,6 @@ export function PaystackCheckoutModal({ job, artisan }) {
             </div>
           )}
 
-          {/* 3. FAILED PAYMENT RETRY SCREEN (Explicit Inclusion #6) */}
           {paymentState === 'failed' && (
             <div className="py-6 text-center space-y-4 animate-fade-in">
               <div className="w-16 h-16 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto">
@@ -176,7 +159,6 @@ export function PaystackCheckoutModal({ job, artisan }) {
             </div>
           )}
 
-          {/* 4. SUCCESS VIEW */}
           {paymentState === 'success' && (
             <div className="py-6 text-center space-y-4 animate-fade-in">
               <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
@@ -187,20 +169,19 @@ export function PaystackCheckoutModal({ job, artisan }) {
                   Match Fee Confirmed & Held!
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Chat thread unlocked with {targetArtisan?.first_name} {targetArtisan?.last_name}.
+                  You can now securely message {targetArtisan?.first_name} {targetArtisan?.last_name} in-app to coordinate.
                 </p>
               </div>
 
               <button
-                onClick={handleOpenChatScreen}
-                className="w-full py-4 bg-[#FAB804] hover:bg-[#FDC80B] text-[#0E3B40] font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-gold-glow transition-all btn-press touch-target"
+                onClick={handleOpenChat}
+                className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
               >
-                <span>Open In-App Chat Now</span>
+                <span>Open Secure Chat</span>
                 <ArrowRight className="w-5 h-5 stroke-[2.5]" />
               </button>
             </div>
           )}
-
         </div>
       </main>
     </div>

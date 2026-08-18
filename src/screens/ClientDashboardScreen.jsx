@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService, TradeServicesMap, LifeCampLocations } from '../services/api';
+import { ApiService, TradeServicesMap, LifeCampLocations } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
@@ -27,7 +27,6 @@ export function ClientDashboardScreen() {
       const list = await ApiService.getArtisans(filter);
       setArtisans(list);
 
-      // Load user jobs from localStorage
       const storedJobs = JSON.parse(localStorage.getItem('artiva_jobs') || '[]');
       setActiveJobs(storedJobs);
 
@@ -52,13 +51,12 @@ export function ClientDashboardScreen() {
       <OfflineBanner onRetry={loadDashboardData} />
 
       <main className="max-w-md mx-auto px-4 py-4 space-y-5 animate-fade-in">
-        {/* Welcome Greeting Banner */}
         <div className="bg-primary-gradient text-white p-5 rounded-3xl shadow-card relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex items-center gap-1 text-xs font-semibold text-[#16D4C6] uppercase tracking-wider mb-1">
             <MapPin className="w-3.5 h-3.5" />
-            <span>Life Camp, Abuja</span>
+            <span>Lagos Estates</span>
           </div>
 
           <h2 className="text-2xl font-extrabold font-['Outfit'] leading-tight">
@@ -77,7 +75,6 @@ export function ClientDashboardScreen() {
           </button>
         </div>
 
-        {/* Active Jobs Section (If any exist) */}
         {activeJobs.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -94,7 +91,7 @@ export function ClientDashboardScreen() {
                   className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:border-[#16858F] transition-all"
                   onClick={() => {
                     if (job.status === 'matched') {
-                      navigateTo('chat', { job, matchId: `match_${job.job_id}_${job.matched_artisan_id}` });
+                      navigateTo('chat_screen', { job, matchId: `match_${job.job_id}_${job.matched_artisan_id}` });
                     } else {
                       navigateTo('match_list', { job });
                     }
@@ -122,13 +119,12 @@ export function ClientDashboardScreen() {
           </div>
         )}
 
-        {/* Trade Category Quick Grid */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">
               Select Trade Category
             </h3>
-            <span className="text-xs text-slate-400 font-medium">Life Camp Verified</span>
+            <span className="text-xs text-slate-400 font-medium">Lagos Verified</span>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -148,7 +144,6 @@ export function ClientDashboardScreen() {
           </div>
         </div>
 
-        {/* Available Artisans Directory List */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-[#0E3B40] text-base font-['Outfit']">

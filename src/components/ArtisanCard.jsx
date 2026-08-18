@@ -8,7 +8,6 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
         selected ? 'border-[#16858F] ring-2 ring-[#16858F]/20' : 'border-slate-100'
       }`}
     >
-      {/* Header Info */}
       <div className="flex items-start gap-3.5">
         <div className="relative">
           <img
@@ -51,7 +50,6 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
         </div>
       </div>
 
-      {/* Badges: NIN Verified + Completed Jobs */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
         {artisan.nin_verified && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-semibold text-[11px]">
@@ -66,7 +64,6 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
         </span>
       </div>
 
-      {/* Services Multi-Select Chips */}
       {artisan.services && artisan.services.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {artisan.services.slice(0, 3).map((service, idx) => (
@@ -82,14 +79,12 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
         </div>
       )}
 
-      {/* Tagline */}
       {artisan.tagline && (
         <p className="text-xs text-slate-600 italic mt-2.5 line-clamp-2">
           "{artisan.tagline}"
         </p>
       )}
 
-      {/* Escrow Fee & Select CTA */}
       {showSelectButton && (
         <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
           <div>

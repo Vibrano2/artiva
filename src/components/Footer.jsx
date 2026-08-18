@@ -9,11 +9,7 @@ export function Footer() {
   return (
     <footer className="bg-dark-footer text-muted border-t border-[#161f2d] pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        
-        {/* Top Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
-          
-          {/* Brand Col */}
           <div className="lg:col-span-2 space-y-6">
             <div className="cursor-pointer" onClick={() => navigateTo('home')}>
               <ArtivaLogo size="md" showWordmark={true} />
@@ -21,7 +17,6 @@ export function Footer() {
             <p className="text-[13px] text-muted max-w-sm leading-relaxed">
               Connecting you with verified, skilled, and reliable artisans for any job — fast, secure, and hassle-free.
             </p>
-            {/* Social Icons */}
             <div className="flex items-center gap-4 text-white">
               <button type="button" onClick={() => showToast('Facebook is coming soon.', 'info')} aria-label="Facebook profile coming soon" className="w-8 h-8 rounded-full border border-[#16858F] bg-transparent flex items-center justify-center hover:bg-[#16858F]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6] transition-colors">
                 <Facebook className="w-4 h-4 fill-current" />
@@ -38,7 +33,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white font-sans">
               Quick Links
@@ -53,7 +47,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* For Artisans */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white font-sans">
               For Artisans
@@ -65,7 +58,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* For Clients */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-white font-sans">
               For Clients
@@ -77,31 +69,33 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact Details */}
           <div className="lg:col-span-1 space-y-4">
             <h4 className="text-sm font-semibold text-white font-sans">
               Contact Us
             </h4>
             <ul className="space-y-3 text-[13px] text-muted">
               <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-[#16858F]" />
-                <span>Phone: to be configured</span>
+                <Phone className="w-4 h-4 text-[#16858F] flex-shrink-0" />
+                <a href="tel:+234800278482" className="hover:text-white transition-colors">
+                  +234 (0) 800 ARTIVA
+                </a>
               </li>
               <li className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-[#16858F]" />
-                <span>Email: to be configured</span>
+                <Mail className="w-4 h-4 text-[#16858F] flex-shrink-0" />
+                <a href="mailto:support@artiva.ng" className="hover:text-white transition-colors">
+                  support@artiva.ng
+                </a>
               </li>
               <li className="flex items-center gap-3">
-                <MapPin className="w-4 h-4 text-[#16858F]" />
-                <span>Location: to be configured</span>
+                <MapPin className="w-4 h-4 text-[#16858F] flex-shrink-0" />
+                <span>Lekki Phase 1, Lagos, Nigeria</span>
               </li>
             </ul>
             
-            {/* Mobile App Store Badges */}
             <div className="pt-2 flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => showToast('Google Play download is coming soon.', 'info')}
+                onClick={() => showToast('Artiva Android app is currently in closed testing.', 'info')}
                 aria-label="Get Artiva on Google Play"
                 className="block w-[180px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6]"
               >
@@ -115,7 +109,7 @@ export function Footer() {
               </button>
               <button
                 type="button"
-                onClick={() => showToast('App Store download is coming soon.', 'info')}
+                onClick={() => showToast('Artiva iOS app is currently in closed testing on TestFlight.', 'info')}
                 aria-label="Download Artiva on the App Store"
                 className="block w-[180px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6]"
               >
@@ -129,19 +123,16 @@ export function Footer() {
               </button>
             </div>
           </div>
-
         </div>
 
-        {/* Bottom Bar */}
         <div className="pt-8 border-t border-[#161f2d] flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-muted">
-          <p>© 2025 Artiva. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Artiva. All rights reserved.</p>
           
           <div className="flex items-center gap-6">
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('terms'); }} className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('privacy'); }} className="hover:text-white transition-colors">Privacy Policy</a>
           </div>
         </div>
-
       </div>
     </footer>
   );

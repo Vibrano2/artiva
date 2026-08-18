@@ -25,7 +25,7 @@ export default {
         error: '#D32F2F',
       },
       fontFamily: {
-        sans: ['Outfit', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       boxShadow: {
         'card': '0 2px 12px -2px rgba(14, 59, 64, 0.08), 0 4px 6px -1px rgba(14, 59, 64, 0.04)',
@@ -40,9 +40,15 @@ export default {
       },
       animation: {
         'fade-in': 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-in-slow': 'fadeIn 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'pulse-subtle': 'pulseSubtle 2s infinite ease-in-out',
         'bounce-light': 'bounceLight 1.5s infinite',
+        'spin-slow': 'spin 40s linear infinite',
+        'spin-reverse-slow': 'spinReverse 30s linear infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'float-delayed': 'float 6s ease-in-out 2s infinite',
+        'float-more-delayed': 'float 6s ease-in-out 4s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -60,6 +66,14 @@ export default {
         bounceLight: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-4px)' },
+        },
+        spinReverse: {
+          '0%': { transform: 'rotate(360deg)' },
+          '100%': { transform: 'rotate(0deg)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-15px)' },
         }
       }
     },

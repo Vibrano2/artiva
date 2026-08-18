@@ -1,38 +1,55 @@
 import React from 'react';
 import { useApp } from './context/AppContext';
-import { HomeScreen } from './screens/HomeScreen';
-import { FindArtisansPage } from './screens/FindArtisansPage';
-import { HowItWorksPage } from './screens/HowItWorksPage';
-import { BecomeArtisanPage } from './screens/BecomeArtisanPage';
-import { JobsPage } from './screens/JobsPage';
-import { AboutUsPage } from './screens/AboutUsPage';
-import { LoginPage } from './screens/LoginPage';
-import { SignUpPage } from './screens/SignUpPage';
-import { HelpCenterPage } from './screens/HelpCenterPage';
-import { SafetyPage } from './screens/SafetyPage';
-import { LegalPage } from './screens/LegalPage';
+import { Toast } from './components';
+import {
+  HomeScreen,
+  FindArtisansPage,
+  HowItWorksPage,
+  BecomeArtisanPage,
+  AboutUsPage,
+  HelpCenterPage,
+  SafetyPage,
+  LegalPage,
+  NotFoundPage,
+  OnboardingScreen,
+  AuthScreen,
+  LoginPage,
+  SignUpPage,
+  ClientDashboardScreen,
+  PostJobScreen,
+  MatchListScreen,
+  PaystackCheckoutModal,
+  JobCompletionRatingModal,
+  LiveTrackingScreen,
+  ChatScreen,
+  ArtisanSignupScreen,
+  VerificationPendingScreen,
+  ArtisanDashboardScreen,
+  AdminQueueScreen,
+} from './screens';
 
-// Mobile app workflow screens
-import { OnboardingScreen } from './screens/OnboardingScreen';
-import { AuthScreen } from './screens/AuthScreen';
-import { ClientDashboardScreen } from './screens/ClientDashboardScreen';
-import { PostJobScreen } from './screens/PostJobScreen';
-import { MatchListScreen } from './screens/MatchListScreen';
-import { PaystackCheckoutModal } from './screens/PaystackCheckoutModal';
-import { ChatScreen } from './screens/ChatScreen';
-import { JobCompletionRatingModal } from './screens/JobCompletionRatingModal';
-import { ArtisanSignupScreen } from './screens/ArtisanSignupScreen';
-import { VerificationPendingScreen } from './screens/VerificationPendingScreen';
-import { ArtisanDashboardScreen } from './screens/ArtisanDashboardScreen';
-import { AdminQueueScreen } from './screens/AdminQueueScreen';
-import { Toast } from './components/Toast';
+const PROTECTED_SCREENS = new Set([
+  'client_dash',
+  'artisan_dash',
+  'post_job',
+  'match_list',
+  'checkout',
+  'complete_rating',
+  'artisan_pending',
+  'admin_queue',
+  'chat_screen',
+  'live_tracking',
+]);
 
 export function AppContent() {
-  const { currentScreen, userRole } = useApp();
+  const { currentScreen, userRole, currentUser, activeJob, activeArtisan } = useApp();
 
   const renderScreen = () => {
+    if (PROTECTED_SCREENS.has(currentScreen) && !currentUser) {
+      return <LoginPage />;
+    }
+
     switch (currentScreen) {
-      // Marketing Website 7 Pages
       case 'home':
         return <HomeScreen />;
       case 'find_artisans':
@@ -41,14 +58,8 @@ export function AppContent() {
         return <HowItWorksPage />;
       case 'become_artisan':
         return <BecomeArtisanPage />;
-      case 'jobs_board':
-        return <JobsPage />;
       case 'about_us':
         return <AboutUsPage />;
-      case 'login':
-        return <LoginPage />;
-      case 'signup':
-        return <SignUpPage />;
       case 'help_center':
         return <HelpCenterPage />;
       case 'safety':
@@ -57,12 +68,18 @@ export function AppContent() {
         return <LegalPage type="terms" />;
       case 'privacy':
         return <LegalPage type="privacy" />;
+      case 'jobs_board':
+        return currentUser ? (userRole === 'artisan' ? <ArtisanDashboardScreen /> : <ClientDashboardScreen />) : <FindArtisansPage />;
 
-      // Application Workflows
       case 'onboarding':
         return <OnboardingScreen />;
       case 'auth':
         return <AuthScreen role={userRole} />;
+      case 'login':
+        return <LoginPage />;
+      case 'signup':
+        return <SignUpPage />;
+
       case 'client_dash':
         return <ClientDashboardScreen />;
       case 'post_job':
@@ -71,20 +88,26 @@ export function AppContent() {
         return <MatchListScreen />;
       case 'checkout':
         return <PaystackCheckoutModal />;
-      case 'chat':
-        return <ChatScreen />;
       case 'complete_rating':
         return <JobCompletionRatingModal />;
+      case 'live_tracking':
+        return <LiveTrackingScreen />;
+      case 'chat_screen':
+        return <ChatScreen job={activeJob} artisan={activeArtisan} />;
+
       case 'artisan_signup':
         return <ArtisanSignupScreen />;
       case 'artisan_pending':
         return <VerificationPendingScreen />;
       case 'artisan_dash':
         return <ArtisanDashboardScreen />;
+
       case 'admin_queue':
         return <AdminQueueScreen />;
+
+      case 'not_found':
       default:
-        return <HomeScreen />;
+        return <NotFoundPage />;
     }
   };
 

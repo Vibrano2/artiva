@@ -2,27 +2,28 @@ import React from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useApp } from '../context/AppContext';
-import { TradeServicesMap } from '../services/api';
+import { ALL_TRADES } from '../services';
 import { Wrench, ShieldCheck, DollarSign, Award, ArrowRight, CheckCircle2, FileText, Camera } from 'lucide-react';
 
 export function BecomeArtisanPage() {
-  const { navigateTo } = useApp();
+  const { navigateTo, setUserRole } = useApp();
 
   const benefits = [
     { title: 'More Local Job Requests', desc: 'Get matched directly with clients needing repair work in your area.' },
     { title: 'No Upfront Membership Fee', desc: 'Joining Artiva is free. You only pay a 10% commission on completed jobs.' },
     { title: 'Protected Escrow Payouts', desc: 'No chasing payments. Job funds are secured before you start work.' },
-    { title: 'Build Your Verified Reputation', desc: 'Earn 5-star client ratings and NIN verification badges to win more jobs.' },
+    { title: 'Build Your Verified Reputation', desc: 'Earn 5-star client ratings and verification badges to win more jobs.' },
   ];
 
   const requirements = [
-    { icon: <ShieldCheck className="w-5 h-5 text-[#16858F]" />, title: 'National Identification Number (NIN)', desc: '11-digit NIN for background identity verification.' },
+
     { icon: <FileText className="w-5 h-5 text-[#16858F]" />, title: 'Valid Photo ID', desc: 'Government driver license, voter card, or international passport.' },
     { icon: <Camera className="w-5 h-5 text-[#16858F]" />, title: 'Portfolio Photos', desc: '2-3 photos showing your recent completed craft projects.' }
   ];
 
   const handleStartSignup = () => {
-    navigateTo('artisan_signup');
+    setUserRole('artisan');
+    navigateTo('signup');
   };
 
   return (
@@ -30,14 +31,13 @@ export function BecomeArtisanPage() {
       <Navbar activeTab="become" />
 
       <main className="flex-1">
-        {/* HERO */}
         <section className="bg-splash-radial text-white py-16 px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <div className="max-w-4xl mx-auto space-y-3">
             <h1 className="text-2xl sm:text-5xl font-extrabold font-['Outfit'] tracking-tight">
               Get More Jobs. Build Your Reputation. Grow Your Business.
             </h1>
             <p className="text-xs sm:text-base text-slate-200 max-w-xl mx-auto leading-relaxed">
-              Join Abuja's trusted network of verified artisans. Receive direct job requests with guaranteed escrow payouts.
+              Join Lagos's trusted network of verified artisans. Receive direct job requests with guaranteed escrow payouts.
             </p>
 
             <div className="pt-4">
@@ -53,7 +53,6 @@ export function BecomeArtisanPage() {
           </div>
         </section>
 
-        {/* CORE BENEFITS */}
         <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
           <div className="text-center space-y-2">
             <h2 className="text-2xl sm:text-4xl font-extrabold font-['Outfit'] text-[#0E3B40]">
@@ -75,7 +74,6 @@ export function BecomeArtisanPage() {
           </div>
         </section>
 
-        {/* LOCKED 6 TRADE CATEGORIES */}
         <section className="py-12 bg-white border-y border-slate-200/80 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto space-y-6">
             <div className="text-center space-y-1">
@@ -86,7 +84,7 @@ export function BecomeArtisanPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {Object.keys(TradeServicesMap).map((trade) => (
+              {ALL_TRADES.map((trade) => (
                 <div key={trade} className="p-4 bg-[#F4F8F8] rounded-2xl border border-slate-200/80 text-center space-y-1">
                   <span className="text-xs font-bold text-[#0E3B40]">{trade}</span>
                 </div>
@@ -95,7 +93,6 @@ export function BecomeArtisanPage() {
           </div>
         </section>
 
-        {/* WHAT YOU'LL NEED PREPARATION */}
         <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
           <div className="text-center space-y-2">
             <h2 className="text-xl sm:text-3xl font-extrabold font-['Outfit'] text-[#0E3B40]">
@@ -116,7 +113,6 @@ export function BecomeArtisanPage() {
             ))}
           </div>
 
-          {/* CTA BUTTON */}
           <div className="text-center pt-4">
             <button
               onClick={handleStartSignup}

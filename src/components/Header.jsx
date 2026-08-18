@@ -11,7 +11,6 @@ export function Header({ title, backTo, showLogo = true }) {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 shadow-sm transition-all">
       <div className="max-w-md mx-auto flex items-center justify-between gap-3">
-        {/* Left Section: Back button or Logo */}
         <div className="flex items-center gap-3 min-w-0">
           {canGoBack ? (
             <button
@@ -45,23 +44,7 @@ export function Header({ title, backTo, showLogo = true }) {
           ) : null}
         </div>
 
-        {/* Right Section: Controls & Status Badges */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Offline simulator toggle button */}
-          <button
-            onClick={() => setIsOffline(!isOffline)}
-            className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 border transition-colors btn-press ${
-              isOffline 
-                ? 'bg-red-50 text-red-700 border-red-200' 
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-            }`}
-            title="Toggle Network Status (Simulate intermittent 3G connection)"
-          >
-            {isOffline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{isOffline ? 'Offline' : 'Online'}</span>
-          </button>
-
-          {/* Role Indicator Badge */}
           {currentUser && (
             <div className="flex items-center gap-1.5 pl-1">
               <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${

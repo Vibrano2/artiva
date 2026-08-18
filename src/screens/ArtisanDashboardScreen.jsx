@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService } from '../services/api';
+import { ApiService } from '../services';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Lock, DollarSign, Award, Star, ShieldCheck, Power, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -53,8 +53,6 @@ export function ArtisanDashboardScreen({ artisanId }) {
       <OfflineBanner onRetry={loadDashboard} />
 
       <main className="max-w-md mx-auto px-4 py-4 space-y-5 animate-fade-in">
-        
-        {/* Status Card & Availability Toggle */}
         <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-card flex items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-1.5">
@@ -66,10 +64,9 @@ export function ArtisanDashboardScreen({ artisanId }) {
               </span>
             </div>
 
-            <p className="text-xs text-[#16858F] font-semibold">Plumbing Specialist • Life Camp</p>
+            <p className="text-xs text-[#16858F] font-semibold">{currentUser?.trade || 'Verified'} • {currentUser?.location || 'Verified Artisan'}</p>
           </div>
 
-          {/* Availability Toggle Button */}
           <button
             onClick={handleToggleAvailability}
             className={`px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all btn-press shadow-sm ${
@@ -83,12 +80,10 @@ export function ArtisanDashboardScreen({ artisanId }) {
           </button>
         </div>
 
-        {/* Financial Summary Metrics Grid */}
         {loading ? (
           <SkeletonLoader type="metrics" />
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {/* Held in Escrow */}
             <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200/80 shadow-sm space-y-1">
               <div className="flex items-center gap-1 text-xs font-bold text-amber-900 uppercase">
                 <Lock className="w-3.5 h-3.5" />
@@ -100,7 +95,6 @@ export function ArtisanDashboardScreen({ artisanId }) {
               <p className="text-[10px] text-amber-800 font-medium">Releases on client confirmation</p>
             </div>
 
-            {/* Released Earnings */}
             <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200/80 shadow-sm space-y-1">
               <div className="flex items-center gap-1 text-xs font-bold text-emerald-900 uppercase">
                 <DollarSign className="w-3.5 h-3.5" />
@@ -112,7 +106,6 @@ export function ArtisanDashboardScreen({ artisanId }) {
               <p className="text-[10px] text-emerald-800 font-medium">Direct bank payout</p>
             </div>
 
-            {/* Completed Jobs */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
               <div className="flex items-center gap-1 text-xs font-bold text-[#0E3B40] uppercase">
                 <Award className="w-3.5 h-3.5 text-[#16858F]" />
@@ -124,7 +117,6 @@ export function ArtisanDashboardScreen({ artisanId }) {
               <p className="text-[10px] text-slate-400 font-medium">Verified completed</p>
             </div>
 
-            {/* Reputation Score */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-1">
               <div className="flex items-center gap-1 text-xs font-bold text-[#0E3B40] uppercase">
                 <Star className="w-3.5 h-3.5 fill-[#FAB804] text-[#D59F0F]" />
@@ -138,10 +130,9 @@ export function ArtisanDashboardScreen({ artisanId }) {
           </div>
         )}
 
-        {/* Incoming Active Jobs / Inbox */}
         <div className="space-y-3">
           <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">
-            Active Client Matches & Messages
+            Active Client Matches
           </h3>
 
           <div className="space-y-2.5">
@@ -153,10 +144,9 @@ export function ArtisanDashboardScreen({ artisanId }) {
               jobs.map((j) => (
                 <div
                   key={j.job_id}
-                  onClick={() => navigateTo('chat', { job: j, matchId: `match_${j.job_id}_artisan_001` })}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:border-[#16858F] transition-all"
+                  className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 transition-all"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs text-[#0E3B40]">{j.trade} Request</span>
                       <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full">
@@ -166,11 +156,6 @@ export function ArtisanDashboardScreen({ artisanId }) {
                     <p className="text-xs text-slate-500 truncate mt-1">{j.description}</p>
                     <p className="text-[11px] text-[#16858F] font-semibold mt-0.5">📍 {j.location}</p>
                   </div>
-
-                  <button className="px-3 py-2 bg-[#16858F] text-white text-xs font-bold rounded-xl flex items-center gap-1 flex-shrink-0 btn-press">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Chat</span>
-                  </button>
                 </div>
               ))
             )}

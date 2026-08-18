@@ -1,32 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService } from '../services/api';
+import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { Phone, ShieldCheck, ArrowRight, CheckSquare, Square, RefreshCw, KeyRound } from 'lucide-react';
+import { Mail, ShieldCheck, ArrowRight, Check, RefreshCw, KeyRound, Phone } from 'lucide-react';
+import { VideoOverlay } from '../components/VideoOverlay';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { auth } from '../config/firebase';
-import PhoneInput from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
 
-export function AuthScreen({ role = 'client' }) {
+export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const { navigateTo, setCurrentUser, setUserRole, showToast } = useApp();
 
-  const [step, setStep] = useState(1); // 1: Phone, 2: OTP
-  const [phone, setPhone] = useState('+2348031234567');
+  const [authMode, setAuthMode] = useState(initialMode);
+  const [step, setStep] = useState(1);
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
-  const [ndprConsent, setNdprConsent] = useState(true);
+  const [ndprConsent, setNdprConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [timer, setTimer] = useState(30);
-
-  useEffect(() => {
-    if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-      });
-    }
-  }, []);
+  const [cardVisible, setCardVisible] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState(null);
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
@@ -35,7 +29,7 @@ export function AuthScreen({ role = 'client' }) {
       return;
     }
     if (!ndprConsent) {
-      setError('You must accept the NDPR privacy policy to proceed.');
+      setError('You must accept the Terms and Privacy Policy to proceed.');
       return;
     }
 
@@ -43,21 +37,27 @@ export function AuthScreen({ role = 'client' }) {
     setLoading(true);
 
     try {
-      const appVerifier = window.recaptchaVerifier;
-      const confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
-      window.confirmationResult = confirmationResult;
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+        });
+      }
+
+      const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+      setConfirmationResult(confirmation);
       
       setLoading(false);
       setStep(2);
-      showToast(`OTP sent to ${phone}`, 'success');
+      showToast(`OTP sent to ${formattedPhone}`, 'success');
       startTimer();
     } catch (err) {
+      console.error(err);
       setLoading(false);
-      setError(err.message);
+      setError(err.message || 'Failed to send OTP');
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(function(widgetId) {
-          window.grecaptcha.reset(widgetId);
-        });
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
       }
     }
   };
@@ -81,15 +81,16 @@ export function AuthScreen({ role = 'client' }) {
       setError('Please enter the 6-digit verification code.');
       return;
     }
+    if (!confirmationResult) {
+      setError('Please request a new OTP.');
+      return;
+    }
 
     setError(null);
     setLoading(true);
 
     try {
-      const result = await window.confirmationResult.confirm(otp);
-      const idToken = await result.user.getIdToken();
-      
-      const res = await ApiService.verifyOtp(idToken, role);
+      const res = await confirmationResult.confirm(otp);
       setLoading(false);
       setCurrentUser(res.user);
       setUserRole(role);
@@ -102,99 +103,131 @@ export function AuthScreen({ role = 'client' }) {
       }
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Invalid OTP code. Please try again.');
+      setError(err.message || 'Invalid OTP');
     }
   };
 
-  const handleQuickFillDemo = () => {
-    setOtp('123456');
-    setError(null);
-  };
-
   return (
-    <div className="min-h-screen bg-[#F4F8F8] flex flex-col justify-between">
-      <Header backTo="onboarding" />
-      <OfflineBanner onRetry={step === 1 ? handleSendOtp : handleVerifyOtp} />
+    <div className="min-h-screen bg-[#0E3B40] flex flex-col justify-between relative overflow-hidden">
+      <VideoOverlay onCardShowTrigger={() => setCardVisible(true)} />
 
-      <main className="max-w-md mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center">
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-card animate-fade-in">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-[#E8F5F6] text-[#16858F] flex items-center justify-center mx-auto mb-3">
-              {step === 1 ? <Phone className="w-6 h-6 stroke-[2.5]" /> : <KeyRound className="w-6 h-6 stroke-[2.5]" />}
-            </div>
-            <h1 className="text-2xl font-bold font-['Outfit'] text-[#0E3B40]">
-              {step === 1 ? 'Enter Phone Number' : 'Verify Security Code'}
-            </h1>
-            <p className="text-xs text-slate-500 mt-1">
+      <div className="relative z-30">
+        <Header backTo="onboarding" />
+      </div>
+
+      <div className="relative z-30">
+        <OfflineBanner onRetry={step === 1 ? handleSendOtp : handleVerifyOtp} />
+      </div>
+
+      <main className="max-w-md mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center relative z-20">
+        <div 
+          className="bg-white/55 backdrop-blur-[6px] p-11 pb-9 rounded-[18px] text-center transition-all duration-800 ease-in-out"
+          style={{
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)',
+            opacity: cardVisible ? 1 : 0,
+            pointerEvents: cardVisible ? 'auto' : 'none',
+            transform: cardVisible ? 'translateY(0)' : 'translateY(20px)'
+          }}
+        >
+          <div className="mb-6">
+            <h1 className="text-[26px] text-[#1f1f1f] mb-1.5 tracking-[0.5px] font-semibold">
               {step === 1 
-                ? 'Instant verification for Life Camp clients & artisans.' 
-                : `We sent a 6-digit OTP code to ${phone}`}
+                ? (authMode === 'signup' ? 'Create Account' : 'Welcome back') 
+                : 'Verify Security Code'}
+            </h1>
+            <p className="text-[14px] text-[#8a8a8a] mb-[30px]">
+              {step === 1 
+                ? (authMode === 'signup' ? 'Sign up to continue' : 'Sign in to continue')
+                : `We sent a 6-digit OTP code to your phone`}
             </p>
           </div>
 
-          {/* Error Banner */}
+          {step === 1 && (
+            <div className="flex bg-white/40 p-1 rounded-xl mb-6 shadow-sm border border-white/50">
+              <button
+                onClick={() => setAuthMode('signup')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                  authMode === 'signup' ? 'bg-[#16858F] text-white shadow-sm' : 'text-[#6b6b6b] hover:text-[#1f1f1f]'
+                }`}
+                type="button"
+              >
+                Sign Up
+              </button>
+              <button
+                onClick={() => setAuthMode('login')}
+                className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                  authMode === 'login' ? 'bg-[#16858F] text-white shadow-sm' : 'text-[#6b6b6b] hover:text-[#1f1f1f]'
+                }`}
+                type="button"
+              >
+                Log In
+              </button>
+            </div>
+          )}
+
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-semibold rounded-xl flex items-center gap-2 animate-pulse">
+            <div className="mb-4 p-3 bg-red-50/80 border border-red-200 text-red-800 text-xs font-semibold rounded-xl flex items-center gap-2 animate-pulse text-left">
               <span>{error}</span>
             </div>
           )}
 
           {step === 1 ? (
-            /* STEP 1: PHONE FORM */
-            <form onSubmit={handleSendOtp} className="space-y-5">
-              <div id="recaptcha-container"></div>
-              <div>
-                <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                  Phone Number
+            <form onSubmit={handleSendOtp} className="space-y-[18px]">
+              <div className="text-left">
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5">
+                  Nigerian Phone Number
                 </label>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 focus-within:border-[#16858F] focus-within:ring-2 focus-within:ring-[#16858F]/20 overflow-hidden transition-all px-4 py-3">
-                  <PhoneInput
-                    international
-                    defaultCountry="NG"
+                <div className="flex items-center rounded-[10px] border-[1.5px] border-[#e0e0e0] bg-[#fafafa] focus-within:border-[#16858F] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#16858F]/25 overflow-hidden transition-all">
+                  <span className="px-3 py-[13px] text-[#444] font-semibold text-[15px] border-r border-[#e0e0e0] flex items-center gap-1.5 bg-gray-50/50">
+                    <span className="text-base">🇳🇬</span> +234
+                  </span>
+                  <input
+                    type="tel"
                     value={phone}
-                    onChange={setPhone}
-                    className="w-full bg-transparent font-medium text-slate-900 text-base focus:outline-none AuthPhoneInput"
-                    style={{ '--PhoneInput-color--focus': '#16858F' }}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="803 123 4567"
+                    className="w-full p-[13px_14px] text-[15px] text-[#222] outline-none bg-transparent"
+                    maxLength={10}
+                    autoFocus
                   />
                 </div>
               </div>
 
-              {/* NDPR Consent Checkbox */}
+              <div id="recaptcha-container"></div>
+
               <div 
                 onClick={() => setNdprConsent(!ndprConsent)}
-                className="flex items-start gap-2.5 cursor-pointer select-none p-2 rounded-xl hover:bg-slate-50 transition-colors"
+                className="flex items-start gap-3 cursor-pointer select-none p-2 rounded-xl hover:bg-white/30 transition-colors text-left"
               >
-                {ndprConsent ? (
-                  <CheckSquare className="w-5 h-5 text-[#16858F] flex-shrink-0 mt-0.5" />
-                ) : (
-                  <Square className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
-                )}
-                <p className="text-xs text-slate-600 leading-snug">
-                  I agree to Artiva's Terms and consent to data processing under Nigeria Data Protection Regulation (NDPR).
+                <div className="flex items-center justify-center h-5">
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${ndprConsent ? 'bg-[#16858F] border-[#16858F]' : 'bg-[#fafafa] border-[#e0e0e0]'}`}>
+                    {ndprConsent && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                  </div>
+                </div>
+                <p className="text-[13px] text-[#444] leading-5">
+                  I agree to <span className="font-bold hover:underline">Artiva's Terms</span> and <span className="font-bold hover:underline">Privacy Policy</span>.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target disabled:opacity-50"
+                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px disabled:opacity-50 mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)]"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Send Verification Code</span>
+                    <span>{authMode === 'signup' ? 'Send Verification Code' : 'Log In With OTP'}</span>
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
               </button>
             </form>
           ) : (
-            /* STEP 2: OTP VERIFICATION FORM */
-            <form onSubmit={handleVerifyOtp} className="space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2 text-center">
+            <form onSubmit={handleVerifyOtp} className="space-y-[18px]">
+              <div className="text-left">
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 text-center">
                   Enter 6-Digit OTP
                 </label>
                 <input
@@ -202,29 +235,17 @@ export function AuthScreen({ role = 'client' }) {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                   placeholder="• • • • • •"
-                  className="w-full py-3.5 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-center text-2xl font-extrabold tracking-[0.4em] text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
+                  className="w-full p-[13px_14px] text-center text-2xl tracking-[0.4em] font-bold text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
                   maxLength={6}
                   autoFocus
                 />
               </div>
 
-              {/* Demo Quick Fill Helper */}
-              <div className="bg-[#E8F5F6] p-3 rounded-2xl border border-[#16858F]/20 flex items-center justify-between gap-2">
-                <span className="text-xs text-[#0E3B40] font-medium">Demo Testing Code: <strong>123456</strong></span>
-                <button
-                  type="button"
-                  onClick={handleQuickFillDemo}
-                  className="px-2.5 py-1 bg-[#16858F] text-white text-xs font-bold rounded-lg hover:bg-[#0E5C63] transition-all btn-press"
-                >
-                  Quick Fill
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center justify-between text-[13px] text-[#6b6b6b] mt-[18px]">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="hover:text-[#16858F] underline"
+                  className="hover:text-[#1f1f1f] transition-colors"
                 >
                   Change Phone Number
                 </button>
@@ -234,7 +255,7 @@ export function AuthScreen({ role = 'client' }) {
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    className="text-[#16858F] font-bold hover:underline flex items-center gap-1"
+                    className="font-bold hover:text-[#1f1f1f] flex items-center gap-1 transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" /> Resend OTP
                   </button>
@@ -244,7 +265,7 @@ export function AuthScreen({ role = 'client' }) {
               <button
                 type="submit"
                 disabled={loading || otp.length < 6}
-                className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target disabled:opacity-50"
+                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px disabled:opacity-50 mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)]"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -260,10 +281,9 @@ export function AuthScreen({ role = 'client' }) {
         </div>
       </main>
 
-      {/* Footer Security Badge */}
-      <footer className="p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-4 h-4 text-[#16858F]" />
-        <span>End-to-End Escrow Protection • Life Camp Abuja</span>
+      <footer className="p-4 text-center text-xs text-[#8a8a8a] flex items-center justify-center gap-1.5 relative z-20 mix-blend-multiply">
+        <ShieldCheck className="w-4 h-4" />
+        <span>End-to-End Escrow Protection • Lagos Estates</span>
       </footer>
     </div>
   );

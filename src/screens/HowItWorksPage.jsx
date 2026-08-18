@@ -10,20 +10,20 @@ export function HowItWorksPage() {
 
   const clientSteps = [
     { num: 1, title: 'Create / Post a Job', desc: 'Describe your repair issue, trade category, location, and urgency level.' },
-    { num: 2, title: 'Receive Matched Artisans', desc: 'Review proximity-ranked verified local artisans with NIN checkmarks.' },
+    { num: 2, title: 'Receive Matched Artisans', desc: 'Review proximity-ranked verified local artisans.' },
     { num: 3, title: 'Agree on the Job', desc: 'Review artisan profiles, services, and estimated match fee.' },
     { num: 4, title: 'Payment Secured via Escrow', desc: 'Your match fee is held in escrow. Funds remain locked until work completes.' },
-    { num: 5, title: 'Artisan Completes Work', desc: 'Artisan arrives on site, performs the service, and coordinates in-app.' },
+    { num: 5, title: 'Artisan Completes Work', desc: 'Artisan arrives on site and performs the service.' },
     { num: 6, title: 'Client Approves Completion', desc: 'Inspect the finished work in your home or premises and tap Confirm.' },
     { num: 7, title: 'Payment Released', desc: 'Funds are safely transferred to the artisan upon your confirmation.' },
   ];
 
   const artisanSteps = [
     { num: 1, title: 'Create an Artisan Account', desc: 'Sign up with your phone number and specify your core trade.' },
-    { num: 2, title: 'Complete NIN Verification', desc: 'Provide your 11-digit NIN and work portfolio photos for admin review.' },
-    { num: 3, title: 'Build Your Profile', desc: 'Select specific service chips and set your availability in Abuja.' },
+    { num: 2, title: 'Complete Verification', desc: 'Provide your ID and work portfolio photos for admin review.' },
+    { num: 3, title: 'Build Your Profile', desc: 'Select specific service chips and set your availability in Lagos.' },
     { num: 4, title: 'Receive Job Opportunities', desc: 'Get matched directly with client job requests in your local area.' },
-    { num: 5, title: 'Accept & Agree on Job', desc: 'Confirm availability and communicate with the client inside the app.' },
+    { num: 5, title: 'Accept & Agree on Job', desc: 'Confirm availability and communicate with the client.' },
     { num: 6, title: 'Complete the Work', desc: 'Deliver quality craftsmanship on site.' },
     { num: 7, title: 'Receive Guaranteed Payout', desc: 'Once the client confirms completion, funds are released directly to your account.' },
   ];
@@ -33,21 +33,18 @@ export function HowItWorksPage() {
       <Navbar activeTab="how" />
 
       <main className="flex-1">
-        {/* HERO */}
         <section className="bg-splash-radial text-white py-14 px-4 sm:px-6 lg:px-8 text-center space-y-3">
           <div className="max-w-4xl mx-auto space-y-2">
             <h1 className="text-2xl sm:text-4xl font-extrabold font-['Outfit']">
               How Artiva Works
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 max-w-xl mx-auto">
-              A transparent marketplace built on NIN identity checks and pay-per-job escrow protection.
+              A transparent marketplace built on secure identity checks and pay-per-job escrow protection.
             </p>
           </div>
         </section>
 
-        {/* DUAL JOURNEY TABS */}
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-          
           <div className="flex justify-center">
             <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-1">
               <button
@@ -73,10 +70,13 @@ export function HowItWorksPage() {
             </div>
           </div>
 
-          {/* STEP LIST */}
           <div className="space-y-4 max-w-3xl mx-auto">
-            {(activeTab === 'client' ? clientSteps : artisanSteps).map((s) => (
-              <div key={s.num} className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start gap-4">
+            {(activeTab === 'client' ? clientSteps : artisanSteps).map((s, idx) => (
+              <div 
+                key={`${activeTab}-${s.num}`} 
+                className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-start gap-4 animate-slide-up hover:shadow-md transition-shadow"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
                 <div className="w-10 h-10 rounded-xl bg-[#E8F5F6] text-[#16858F] font-extrabold text-sm flex items-center justify-center flex-shrink-0">
                   {s.num}
                 </div>
@@ -88,7 +88,6 @@ export function HowItWorksPage() {
             ))}
           </div>
 
-          {/* ESCROW EXPLANATION DEEP DIVE */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-card max-w-3xl mx-auto space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
@@ -107,7 +106,6 @@ export function HowItWorksPage() {
             </p>
           </div>
 
-          {/* CTA */}
           <div className="text-center pt-4">
             <button
               onClick={() => navigateTo(activeTab === 'client' ? 'find_artisans' : 'become_artisan')}
@@ -117,7 +115,6 @@ export function HowItWorksPage() {
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
-
         </section>
       </main>
 

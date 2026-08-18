@@ -1,7 +1,7 @@
 import React from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService } from '../services/api';
+import { ApiService } from '../services';
 import { Clock, ShieldAlert, CheckCircle2, ShieldCheck, ArrowRight, Zap } from 'lucide-react';
 
 export function VerificationPendingScreen({ artisanId }) {
@@ -34,11 +34,10 @@ export function VerificationPendingScreen({ artisanId }) {
               Verification Under Review
             </h1>
             <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
-              Your NIN details and trade certificates have been submitted to the Artiva Admin Queue for Life Camp.
+              Your NIN details and trade certificates have been submitted to the Artiva Admin Queue for Lagos Estates.
             </p>
           </div>
 
-          {/* Checklist */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 text-left space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-700">NIN Identity Database:</span>
@@ -49,12 +48,11 @@ export function VerificationPendingScreen({ artisanId }) {
               <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-md text-[10px] uppercase">Submitted</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-700">Life Camp Coverage:</span>
+              <span className="font-semibold text-slate-700">Lagos Coverage:</span>
               <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-md text-[10px] uppercase">Approved</span>
             </div>
           </div>
 
-          {/* Interactive Demo Trigger */}
           <div className="pt-2 space-y-3">
             <button
               onClick={handleSimulateAdminApproval}
