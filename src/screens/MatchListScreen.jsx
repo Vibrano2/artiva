@@ -5,6 +5,7 @@ import { ApiService } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { NoResponseTimer } from '../components/NoResponseTimer';
 import { ShieldCheck, MapPin, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
 
 export function MatchListScreen({ job }) {
@@ -33,7 +34,7 @@ export function MatchListScreen({ job }) {
   };
 
   const handleSelectArtisan = (artisan) => {
-    navigateTo('checkout', { job: targetJob, artisan });
+    navigateTo('client_artisan_profile', { job: targetJob, artisan });
   };
 
   return (

@@ -5,6 +5,7 @@ import { ApiService, TradeServicesMap, LifeCampLocations } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { NoResponseTimer } from '../components/NoResponseTimer';
 import { Search, Plus, MapPin, Wrench, ShieldCheck, Zap, ChevronRight, MessageSquare, CheckCircle, Clock } from 'lucide-react';
 
 export function ClientDashboardScreen() {
@@ -98,7 +99,7 @@ export function ClientDashboardScreen() {
                   }}
                 >
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className="font-bold text-xs text-[#0E3B40]">{job.trade} Repair</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
                         job.status === 'complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
@@ -106,7 +107,12 @@ export function ClientDashboardScreen() {
                         {job.status}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">{job.description}</p>
+                    {job.status === 'matched' && job.created_at && (
+                      <div className="mb-1">
+                        <NoResponseTimer expiresAt={new Date(new Date(job.created_at).getTime() + 15 * 60000)} hasResponded={job.artisan_responded} />
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500 truncate">{job.description}</p>
                   </div>
 
                   <button className="px-3 py-1.5 bg-[#E8F5F6] text-[#16858F] text-xs font-bold rounded-xl flex items-center gap-1 flex-shrink-0">

@@ -20,10 +20,12 @@ export { PaystackCheckoutModal } from './PaystackCheckoutModal';
 export { JobCompletionRatingModal } from './JobCompletionRatingModal';
 export { LiveTrackingScreen } from './LiveTrackingScreen';
 export { ChatScreen } from './ChatScreen';
+export { ClientArtisanProfileScreen } from './ClientArtisanProfileScreen';
 
 export { ArtisanSignupScreen } from './ArtisanSignupScreen';
 export { VerificationPendingScreen } from './VerificationPendingScreen';
 export { ArtisanDashboardScreen } from './ArtisanDashboardScreen';
+export { ArtisanProformaScreen } from './ArtisanProformaScreen';
 
 export { AdminQueueScreen } from './AdminQueueScreen';
 export { AdminDashboardScreen } from './AdminDashboardScreen';

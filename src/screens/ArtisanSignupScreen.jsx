@@ -14,6 +14,7 @@ export function ArtisanSignupScreen() {
   
   const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
   const [lastName, setLastName] = useState(currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '');
+  const [phone, setPhone] = useState(currentUser?.phoneNumber || '');
   const [trade, setTrade] = useState(ALL_TRADES[0]);
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [tagline, setTagline] = useState('');
@@ -41,6 +42,7 @@ export function ArtisanSignupScreen() {
     if (step === 1) {
       if (!firstName.trim()) return setError('Please provide your first name.');
       if (!lastName.trim()) return setError('Please provide your last name.');
+      if (!phone.trim()) return setError('Please provide your phone number.');
     }
     if (step === 2 && !tagline) {
       setError('Please provide a short tagline or bio.');
@@ -64,7 +66,7 @@ export function ArtisanSignupScreen() {
         last_name: lastName,
         email: '',
         password: '',
-        phone: currentUser?.phoneNumber || '',
+        phone: phone,
         trade,
         services: selectedServices,
         location,
@@ -147,6 +149,17 @@ export function ArtisanSignupScreen() {
                   onChange={(e) => setLastName(e.target.value)}
                   placeholder="Doe"
                   autoComplete="family-name"
+                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Phone Number</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+234 803 000 0000"
                   className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
                 />
               </div>
@@ -252,10 +265,24 @@ export function ArtisanSignupScreen() {
 
               <div>
                 <label className="block text-[13px] font-semibold text-[#444] mb-2 uppercase">Upload Valid ID</label>
-                <div className="h-28 rounded-2xl border-2 border-dashed border-[#16858F] flex flex-col items-center justify-center p-2 text-center text-[#16858F] bg-white/40 cursor-pointer hover:bg-white/60 transition-colors">
-                  <Upload className="w-6 h-6 mb-1" />
-                  <span className="text-xs font-bold">Tap to Upload ID</span>
-                </div>
+                <label className="h-28 rounded-2xl border-2 border-dashed border-[#16858F] flex flex-col items-center justify-center p-2 text-center text-[#16858F] bg-white/40 cursor-pointer hover:bg-white/60 transition-colors">
+                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setIdPhoto(reader.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }} />
+                  {idPhoto ? (
+                    <img src={idPhoto} alt="ID Preview" className="h-full object-contain" />
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 mb-1" />
+                      <span className="text-xs font-bold">Tap to Upload ID</span>
+                    </>
+                  )}
+                </label>
               </div>
 
               <div>
@@ -275,10 +302,18 @@ export function ArtisanSignupScreen() {
                   {workPhotos.map((url, i) => (
                     <img key={i} src={url} alt="Work sample" className="w-full h-28 object-cover rounded-[10px] border border-[#e0e0e0]" />
                   ))}
-                  <div className="h-28 rounded-[10px] border-2 border-dashed border-white flex flex-col items-center justify-center p-2 text-center text-[#6b6b6b] bg-white/40 cursor-pointer hover:bg-white/60">
+                  <label className="h-28 rounded-[10px] border-2 border-dashed border-white flex flex-col items-center justify-center p-2 text-center text-[#6b6b6b] bg-white/40 cursor-pointer hover:bg-white/60">
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                      const files = Array.from(e.target.files);
+                      files.forEach(file => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setWorkPhotos(prev => [...prev, reader.result]);
+                        reader.readAsDataURL(file);
+                      });
+                    }} />
                     <Upload className="w-6 h-6 mb-1" />
                     <span className="text-[10px] font-bold">Add Photo</span>
-                  </div>
+                  </label>
                 </div>
               </div>
 

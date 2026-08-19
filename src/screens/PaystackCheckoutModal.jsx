@@ -14,7 +14,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  const matchFee = targetArtisan?.match_fee || 1500;
+  const matchFee = targetArtisan?.match_fee || 500;
 
   const handleInitializePaystack = async () => {
     setPaymentState('processing');
@@ -93,11 +93,23 @@ export function PaystackCheckoutModal({ job, artisan }) {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 font-medium">Match Fee (Held in Escrow):</span>
-                  <span className="font-extrabold text-base text-[#0E3B40]">
-                    ₦{matchFee.toLocaleString()}
-                  </span>
+                <div className="pt-2 border-t border-slate-200/80 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Job Value:</span>
+                    <span className="font-semibold text-[#0E3B40]">
+                      ₦{(targetJob?.budget || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Artiva Platform Fee:</span>
+                    <span className="font-semibold text-[#0E3B40]">
+                      ₦{matchFee.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 font-extrabold text-base text-[#0E3B40]">
+                    <span>Total Charged:</span>
+                    <span>₦{((targetJob?.budget || 0) + matchFee).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
@@ -111,7 +123,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
                   className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
                 >
                   <Lock className="w-4 h-4 stroke-[2.5]" />
-                  <span>Pay ₦{matchFee.toLocaleString()} & Open Secure Chat</span>
+                  <span>Pay ₦{((targetJob?.budget || 0) + matchFee).toLocaleString()} securely</span>
                 </button>
 
                 <button

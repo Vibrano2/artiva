@@ -77,6 +77,39 @@ export function AdminDashboardScreen() {
             </div>
           </button>
         </div>
+
+        {/* Operational Queues */}
+        <div className="space-y-3 pt-2">
+          <h2 className="text-sm font-bold text-[#0E3B40] px-1">Operational Queues</h2>
+          
+          <button
+            className="w-full bg-white p-4 rounded-2xl border border-amber-200 shadow-sm flex items-center gap-4 hover:border-amber-400 transition-colors btn-press text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0 relative">
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-[9px] text-white font-bold items-center justify-center">2</span>
+              </span>
+              <Briefcase className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-[#0E3B40] text-sm">Proforma Approvals</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Review estimates submitted by artisans before client approval.</p>
+            </div>
+          </button>
+
+          <button
+            className="w-full bg-white p-4 rounded-2xl border border-red-200 shadow-sm flex items-center gap-4 hover:border-red-400 transition-colors btn-press text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+              <Activity className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-[#0E3B40] text-sm">No-Response Flags</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Investigate artisans failing to respond within 15 minutes.</p>
+            </div>
+          </button>
+        </div>
       </main>
     </div>
   );

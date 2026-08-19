@@ -28,6 +28,8 @@ import {
   AdminQueueScreen,
   AdminDashboardScreen,
   AdminAddArtisanScreen,
+  ClientArtisanProfileScreen,
+  ArtisanProformaScreen,
 } from './screens';
 
 const PROTECTED_SCREENS = new Set([
@@ -96,6 +98,8 @@ export function AppContent() {
         return <LiveTrackingScreen />;
       case 'chat_screen':
         return <ChatScreen job={activeJob} artisan={activeArtisan} />;
+      case 'client_artisan_profile':
+        return <ClientArtisanProfileScreen artisan={activeArtisan} job={activeJob} />;
 
       case 'artisan_signup':
         return <ArtisanSignupScreen />;
@@ -103,6 +107,8 @@ export function AppContent() {
         return <VerificationPendingScreen />;
       case 'artisan_dash':
         return <ArtisanDashboardScreen />;
+      case 'artisan_proforma':
+        return <ArtisanProformaScreen job={activeJob} matchId={`match_${activeJob?.job_id}_${currentUser?.uid}`} />;
 
       case 'admin_queue':
         return <AdminQueueScreen />;

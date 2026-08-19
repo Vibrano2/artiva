@@ -41,5 +41,22 @@ export const AdminService = {
       body: JSON.stringify(data)
     });
     return res.data || res;
+  },
+
+  async getAdminProformaQueue() {
+    const res = await fetchWithAuth('/admin/proforma-queue');
+    return res.data || (Array.isArray(res) ? res : []);
+  },
+
+  async approveProforma(id) {
+    const res = await fetchWithAuth(`/admin/proforma/${id}/approve`, {
+      method: 'POST'
+    });
+    return res.data || res;
+  },
+
+  async getAdminFlags() {
+    const res = await fetchWithAuth('/admin/flags');
+    return res.data || (Array.isArray(res) ? res : []);
   }
 };
