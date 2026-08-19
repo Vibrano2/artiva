@@ -19,7 +19,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app, 'default');
 export const analytics = getAnalytics(app);
 
-if (import.meta.env.DEV) {
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
