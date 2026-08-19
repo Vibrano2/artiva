@@ -143,10 +143,10 @@ export function ChatScreen({ job, artisan }) {
                       : 'bg-white border border-slate-200 text-[#0E3B40] rounded-bl-sm shadow-sm'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                  <p className="text-sm leading-relaxed">{msg.content || msg.text}</p>
                 </div>
                 <span className="text-[10px] text-slate-400 mt-1 px-1">
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}
                 </span>
               </div>
             );

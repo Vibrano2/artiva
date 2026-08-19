@@ -30,7 +30,8 @@ export function PaystackCheckoutModal({ job, artisan }) {
         }
       }
 
-      await ApiService.initializePayment(targetJob.job_id, targetArtisan.uid);
+      const matchId = targetJob?.match_id || `match_${targetJob?.job_id}_${targetArtisan?.uid}`;
+      await ApiService.initializePayment(matchId);
 
       setTimeout(async () => {
         setLoading(false);

@@ -37,10 +37,10 @@ export function HeroBrandMark() {
           className="w-11 h-11 rounded-full object-cover border-2 border-[#16858F]"
         />
         <div className="pr-2">
-          <p className="text-white text-sm font-bold font-sans">Sunday O.</p>
+          <p className="text-white text-sm font-bold font-sans">Mr. Emeka</p>
           <p className="text-[#16D4C6] text-[11px] font-semibold flex items-center gap-1">
             <ShieldCheck className="w-3 h-3" />
-            Verified Plumber
+            Verified Electrician
           </p>
         </div>
       </div>

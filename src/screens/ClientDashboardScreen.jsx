@@ -6,6 +6,7 @@ import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { NoResponseTimer } from '../components/NoResponseTimer';
+import { PRD_CLIENTS } from '../data/prdPeople';
 import { Search, Plus, MapPin, Wrench, ShieldCheck, Zap, ChevronRight, MessageSquare, CheckCircle, Clock } from 'lucide-react';
 
 export function ClientDashboardScreen() {
@@ -61,7 +62,8 @@ export function ClientDashboardScreen() {
           </div>
 
           <h2 className="text-2xl font-extrabold font-['Outfit'] leading-tight">
-            Hi, {currentUser?.first_name || 'Client'}! 👋
+            {/* PRD v1.9 Section 4.2 — Mrs. Amaka is the named client persona */}
+            Hi, {currentUser?.first_name || PRD_CLIENTS[0].first_name}! 👋
           </h2>
           <p className="text-xs text-slate-200 mt-1 leading-relaxed">
             Connect with NIN-verified local artisans with protected escrow payments.

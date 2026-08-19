@@ -4,11 +4,14 @@ import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { PRD_ARTISANS } from '../data/prdPeople';
 import { Lock, DollarSign, Award, Star, ShieldCheck, Power, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export function ArtisanDashboardScreen({ artisanId }) {
   const { navigateTo, currentUser, showToast } = useApp();
   const targetUid = artisanId || currentUser?.uid || 'artisan_001';
+  // PRD v1.9 Section 4.3 — Mr. Emeka is the named artisan persona
+  const prdFallback = PRD_ARTISANS[0];
 
   const [stats, setStats] = useState(null);
   const [available, setAvailable] = useState(true);
@@ -57,14 +60,14 @@ export function ArtisanDashboardScreen({ artisanId }) {
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-bold text-[#0E3B40] text-base font-['Outfit']">
-                {currentUser?.first_name || 'Sunday'} {currentUser?.last_name || 'Okafor'}
+                {currentUser?.first_name || prdFallback.first_name} {currentUser?.last_name || prdFallback.last_name}
               </h2>
               <span className="p-0.5 bg-[#16858F] text-white rounded-full" title="Verified Artisan">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </span>
             </div>
 
-            <p className="text-xs text-[#16858F] font-semibold">{currentUser?.trade || 'Verified'} • {currentUser?.location || 'Verified Artisan'}</p>
+            <p className="text-xs text-[#16858F] font-semibold">{currentUser?.trade || prdFallback.trade} • {currentUser?.location || prdFallback.location}</p>
           </div>
 
           <button

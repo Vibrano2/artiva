@@ -25,10 +25,29 @@ export function ArtisanProformaScreen({ job, matchId }) {
 
     setSubmitting(true);
     try {
-      await ApiService.submitProforma(matchId || 'demo_match_id', {
-        materialsCost: materials,
-        laborCost: labor,
-        notes: notes.trim()
+      await ApiService.submitProformaInvoice({
+        job_id: job?.job_id || matchId || 'demo_job_id',
+        supplier_name: "Artisan Standard Supply",
+        supplier_bank_details: {
+          account_name: "Self Supplied",
+          account_number: "0000000000",
+          bank_code: "000"
+        },
+        total_amount: totalCost,
+        items: [
+          {
+            description: `Materials: ${notes.trim() || 'General supplies'}`,
+            quantity: 1,
+            unit_price: materials,
+            total: materials
+          },
+          {
+            description: "Labor Cost",
+            quantity: 1,
+            unit_price: labor,
+            total: labor
+          }
+        ]
       });
       showToast('Proforma invoice sent to client for approval', 'success');
       navigateTo('artisan_dash');

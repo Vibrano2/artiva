@@ -1,19 +1,16 @@
 import { fetchWithAuth } from './apiConfig';
 
 export const PaymentService = {
-  async initializePayment(jobId, artisanId) {
+  async initializePayment(matchId) {
     try {
-      const res = await fetchWithAuth(`/v1/payments/initialize`, {
+      const res = await fetchWithAuth(`/v1/payments/initialise`, {
         method: 'POST',
-        body: JSON.stringify({ jobId, artisanId })
+        body: JSON.stringify({ match_id: matchId })
       });
       return res.data || res;
-    } catch {
-      const fallbackRes = await fetchWithAuth(`/payments/initialise`, {
-        method: 'POST',
-        body: JSON.stringify({ jobId, artisanId })
-      });
-      return fallbackRes.data || fallbackRes;
+    } catch (err) {
+      console.error("Escrow Init Error:", err);
+      throw err;
     }
   },
 

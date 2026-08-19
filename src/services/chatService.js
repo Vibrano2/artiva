@@ -1,11 +1,14 @@
-import { apiCall } from './apiConfig';
+import { fetchWithAuth } from './apiConfig';
 
 export const ChatService = {
-  getChatMessages: async (matchId) => {
-    return apiCall(`/chat/${matchId}/messages`, 'GET');
+  getChatMessages: async (jobId) => {
+    return fetchWithAuth(`/v1/chat/job/${jobId}?limit=50`, { method: 'GET' });
   },
 
-  sendChatMessage: async (matchId, text) => {
-    return apiCall(`/chat/${matchId}/messages`, 'POST', { text });
+  sendChatMessage: async (jobId, content) => {
+    return fetchWithAuth(`/v1/chat/job/${jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
   }
 };

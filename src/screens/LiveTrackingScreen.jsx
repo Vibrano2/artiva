@@ -117,8 +117,8 @@ export function LiveTrackingScreen() {
               <img src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&h=150&fit=crop" alt="Artisan" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <h4 className="font-bold text-[#0E3B40] text-base">Sunday O.</h4>
-              <p className="text-sm text-slate-500 font-medium">Expert Plumber</p>
+              <h4 className="font-bold text-[#0E3B40] text-base">Mr. Emeka</h4>
+              <p className="text-sm text-slate-500 font-medium">Verified Electrician</p>
               <div className="flex items-center gap-1 mt-1 text-xs text-[#16858F] font-semibold">
                 <MapPin className="w-3.5 h-3.5" />
                 <span>Live Location Active</span>
