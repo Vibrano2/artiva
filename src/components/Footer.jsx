@@ -12,7 +12,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="cursor-pointer" onClick={() => navigateTo('home')}>
-              <ArtivaLogo size="md" showWordmark={true} />
+              <ArtivaLogo size="md" showWordmark={true} lightMode={true} />
             </div>
             <p className="text-[13px] text-muted max-w-sm leading-relaxed">
               Connecting you with verified, skilled, and reliable artisans for any job — fast, secure, and hassle-free.
@@ -88,7 +88,7 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <MapPin className="w-4 h-4 text-[#16858F] flex-shrink-0" />
-                <span>Lekki Phase 1, Lagos, Nigeria</span>
+                <span>Life Camp, Abuja, Nigeria</span>
               </li>
             </ul>
             
@@ -131,6 +131,7 @@ export function Footer() {
           <div className="flex items-center gap-6">
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('terms'); }} className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('privacy'); }} className="hover:text-white transition-colors">Privacy Policy</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('admin_dash'); }} className="hover:text-white transition-colors">Admin Login</a>
           </div>
         </div>
       </div>

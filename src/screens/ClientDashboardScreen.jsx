@@ -56,7 +56,7 @@ export function ClientDashboardScreen() {
           
           <div className="flex items-center gap-1 text-xs font-semibold text-[#16D4C6] uppercase tracking-wider mb-1">
             <MapPin className="w-3.5 h-3.5" />
-            <span>Lagos Estates</span>
+            <span>Life Camp Abuja</span>
           </div>
 
           <h2 className="text-2xl font-extrabold font-['Outfit'] leading-tight">
@@ -124,7 +124,7 @@ export function ClientDashboardScreen() {
             <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">
               Select Trade Category
             </h3>
-            <span className="text-xs text-slate-400 font-medium">Lagos Verified</span>
+            <span className="text-xs text-slate-400 font-medium">Verified</span>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">

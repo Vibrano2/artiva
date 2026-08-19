@@ -28,7 +28,7 @@ export function OnboardingScreen() {
 
   const handleStartClient = () => {
     setUserRole('client');
-    navigateTo('auth', { role: 'client' });
+    navigateTo('signup');
   };
 
   const handleStartArtisan = () => {
@@ -110,12 +110,7 @@ export function OnboardingScreen() {
               </div>
             </div>
 
-            <button
-              onClick={handleStartAdmin}
-              className="mt-8 opacity-20 hover:opacity-100 text-xs text-slate-500 transition-opacity font-sans"
-            >
-              Access Admin Console
-            </button>
+
           </div>
 
           <div className="w-full flex justify-center items-center lg:min-h-[500px] animate-fade-in-slow">

@@ -12,10 +12,8 @@ export function ArtisanSignupScreen() {
   const [step, setStep] = useState(1);
   const [cardVisible, setCardVisible] = useState(false);
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
+  const [lastName, setLastName] = useState(currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '');
   const [trade, setTrade] = useState(ALL_TRADES[0]);
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [tagline, setTagline] = useState('');
@@ -41,10 +39,8 @@ export function ArtisanSignupScreen() {
   const handleNextStep = () => {
     setError(null);
     if (step === 1) {
-      if (!email || !email.includes('@')) return setError('Please provide a valid email.');
-      if (!password || password.length < 6) return setError('Password must be at least 6 characters.');
-      if (password !== confirmPassword) return setError('Passwords do not match.');
-      if (!phone) return setError('Please provide your phone number.');
+      if (!firstName.trim()) return setError('Please provide your first name.');
+      if (!lastName.trim()) return setError('Please provide your last name.');
     }
     if (step === 2 && !tagline) {
       setError('Please provide a short tagline or bio.');
@@ -63,15 +59,12 @@ export function ArtisanSignupScreen() {
     setError(null);
 
     try {
-      const firstName = currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || 'Artisan';
-      const lastName = currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '';
-      
       const res = await ApiService.signupArtisan({
         first_name: firstName,
         last_name: lastName,
-        email,
-        password,
-        phone: '+234' + phone.replace(/^0+/, ''),
+        email: '',
+        password: '',
+        phone: currentUser?.phoneNumber || '',
         trade,
         services: selectedServices,
         location,
@@ -135,47 +128,25 @@ export function ArtisanSignupScreen() {
               <h2 className="text-[22px] font-bold text-[#1f1f1f] mb-2">Contact Information</h2>
               
               <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Email Address</label>
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">First Name</label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="off"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  autoComplete="given-name"
                   className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
                 />
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Password</label>
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Last Name</label>
                 <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Confirm Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Phone Number (+234)</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0803 000 0000"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  autoComplete="family-name"
                   className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
                 />
               </div>

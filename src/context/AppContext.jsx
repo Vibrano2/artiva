@@ -24,12 +24,12 @@ const pathScreens = Object.fromEntries(
 
 const screenMetadata = {
   home: {
-    title: 'Artiva — Verified Local Artisans | Lekki & VGC Lagos',
-    description: 'Connect with verified, NIN-checked local artisans in Lekki, VGC, Ikota & Chevron. Fast, protected escrow jobs.'
+    title: 'Artiva — Verified Local Artisans | Life Camp Abuja',
+    description: 'Connect with verified, NIN-checked local artisans in Life Camp. Fast, protected escrow jobs.'
   },
   find_artisans: {
-    title: 'Find Verified Artisans in Lagos | Artiva',
-    description: 'Browse background-checked plumbers, electricians, carpenters, and technicians available for hire in Lagos.'
+    title: 'Find Verified Artisans in Abuja | Artiva',
+    description: 'Browse background-checked plumbers, electricians, carpenters, and technicians available for hire in Abuja.'
   },
   how_it_works: {
     title: 'How It Works — Escrow & Verification | Artiva',

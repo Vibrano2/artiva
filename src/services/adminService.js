@@ -33,5 +33,13 @@ export const AdminService = {
       body: JSON.stringify({ action })
     });
     return res.data || res;
+  },
+
+  async addArtisan(data) {
+    const res = await fetchWithAuth('/v1/admin/artisans', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return res.data || res;
   }
 };

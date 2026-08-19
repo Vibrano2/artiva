@@ -22,7 +22,7 @@ export function AboutUsPage() {
               Creating a Safer, More Reliable Way to Hire Local Artisans.
             </h1>
             <p className="text-xs sm:text-base text-slate-200 max-w-2xl mx-auto leading-relaxed">
-              Starting in Lagos and expanding across Nigeria, Artiva bridges the trust gap between homeowners and verified skilled craftspeople.
+              Starting in Life Camp Abuja and expanding across Nigeria, Artiva bridges the trust gap between homeowners and verified skilled craftspeople.
             </p>
           </div>
         </section>
@@ -37,13 +37,13 @@ export function AboutUsPage() {
                 <h2 className="text-xl sm:text-2xl font-bold font-['Outfit'] text-[#0E3B40]">
                   Founded by Gabriel
                 </h2>
-                <p className="text-xs text-[#16858F] font-semibold">25+ Years Construction & Contracting Experience in Lagos</p>
+                <p className="text-xs text-[#16858F] font-semibold">25+ Years Construction & Contracting Experience in Abuja</p>
               </div>
             </div>
 
             <div className="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed pt-2 border-t border-slate-100">
               <p>
-                After spending over two decades managing residential and commercial contracting projects in Lagos's premier residential estates, Gabriel experienced firsthand the recurring frustrations that plagued local service hiring: clients struggling to find verified craftspeople they could trust in their homes, and skilled artisans struggling with delayed payments and lack of formal recognition.
+                After spending over two decades managing residential and commercial contracting projects in Abuja's premier residential estates, Gabriel experienced firsthand the recurring frustrations that plagued local service hiring: clients struggling to find verified craftspeople they could trust in their homes, and skilled artisans struggling with delayed payments and lack of formal recognition.
               </p>
               <p>
                 Artiva was created to fix this broken dynamic. By combining mandatory National Identification Number (NIN) background verification with a pay-per-job escrow payment model, Artiva guarantees that clients only pay for completed work while honest artisans receive prompt, guaranteed payouts.
@@ -73,7 +73,7 @@ export function AboutUsPage() {
                 <Heart className="w-5 h-5 stroke-[2.5]" />
               </div>
               <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">Local Expertise</h3>
-              <p className="text-xs text-slate-500">Built by contractors who understand Lagos's premier estate needs.</p>
+              <p className="text-xs text-slate-500">Built by contractors who understand Abuja's premier estate needs.</p>
             </div>
           </div>
         </section>

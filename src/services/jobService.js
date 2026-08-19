@@ -4,9 +4,9 @@ export const JobService = {
   async postJob(jobData) {
     const { trade, location, urgency, timing, description, budget, photos } = jobData;
     const locObj = typeof location === 'object' ? location : {
-      address: location || 'Lekki Phase 1',
-      city: 'Lagos',
-      state: 'Lagos'
+      address: location || 'Life Camp, Abuja',
+      city: 'Abuja',
+      state: 'FCT'
     };
 
     const res = await fetchWithAuth('/v1/jobs', {

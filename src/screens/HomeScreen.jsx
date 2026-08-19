@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 import { ArrowRight, FilePenLine, HardHat, LockKeyhole, ShieldCheck, Tag, UsersRound } from 'lucide-react';
 
 export function HomeScreen() {
-  const { navigateTo } = useApp();
+  const { navigateTo, setUserRole } = useApp();
 
   return (
     <div className="artiva-dark-canvas min-h-screen flex flex-col justify-between text-[#e0e2e4] relative overflow-hidden">
@@ -31,7 +31,10 @@ export function HomeScreen() {
 
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
               <button
-                onClick={() => navigateTo('find_artisans')}
+                onClick={() => {
+                  setUserRole('client');
+                  navigateTo('signup');
+                }}
                 className="w-full sm:w-[211px] h-[44px] bg-[#16858F] hover:bg-[#0E5C63] text-white font-normal text-[15px] rounded-lg flex items-center justify-center gap-2 transition-all btn-press"
               >
                 <span>Find an Artisan</span>
@@ -39,7 +42,10 @@ export function HomeScreen() {
               </button>
 
               <button
-                onClick={() => navigateTo('become_artisan')}
+                onClick={() => {
+                  setUserRole('artisan');
+                  navigateTo('artisan_signup');
+                }}
                 className="w-full sm:w-[194px] h-[44px] bg-transparent hover:bg-white/5 border border-[#F5B700] text-[#F5B700] font-normal text-[15px] rounded-lg flex items-center justify-center gap-2 transition-all btn-press"
               >
                 <HardHat className="w-4 h-4 text-[#F5B700]" />

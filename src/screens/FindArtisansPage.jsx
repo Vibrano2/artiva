@@ -59,7 +59,7 @@ export function FindArtisansPage() {
               Find a trusted artisan for your job.
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 max-w-xl mx-auto">
-              Search verified local plumbers, electricians, and technicians in Lekki, VGC & Ikota by trade and area.
+              Search verified local plumbers, electricians, and technicians in Life Camp by trade and area.
             </p>
           </div>
         </section>

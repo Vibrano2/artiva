@@ -18,8 +18,7 @@ export const ALL_TRADES = [
 ];
 
 export const TARGET_LOCATIONS = [
-  'Lekki Phase 1', 'VGC', 'Ikota Villa', 'Chevron Drive',
-  'Maitama (Abuja)', 'Wuse 2 (Abuja)', 'Asokoro (Abuja)', 'Gwarinpa (Abuja)'
+  'Life Camp (Abuja)'
 ];
 
 export const ApiService = {

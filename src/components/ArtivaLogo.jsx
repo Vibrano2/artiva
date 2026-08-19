@@ -16,7 +16,7 @@ export function ArtivaLogo({ size = 'md', showWordmark = true, showTagline = fal
 
       {showWordmark && (
         <div className="flex flex-col text-left">
-          <span className={`font-extrabold tracking-tight font-['Outfit'] ${sizeClasses.text} leading-none ${isSplash ? 'text-[#16D4C6]' : (lightMode ? 'text-white' : 'text-[#0E3B40]')}`}>
+          <span className={`font-extrabold tracking-tight font-['Outfit'] ${sizeClasses.text} leading-none ${isSplash ? 'text-[#16D4C6]' : (lightMode ? 'text-[#ffffff]' : 'text-[#0E3B40]')}`}>
             Artiva
           </span>
           {showTagline && (

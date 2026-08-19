@@ -10,9 +10,9 @@ export const ArtisanService = {
     } = data;
 
     const locObj = typeof location === 'object' ? location : {
-      city: 'Lagos',
-      state: 'Lagos',
-      address: location || 'Lekki Phase 1'
+      city: 'Abuja',
+      state: 'FCT',
+      address: location || 'Life Camp, Abuja'
     };
 
     const res = await fetchWithAuth('/v1/artisans', {

@@ -26,3 +26,5 @@ export { VerificationPendingScreen } from './VerificationPendingScreen';
 export { ArtisanDashboardScreen } from './ArtisanDashboardScreen';
 
 export { AdminQueueScreen } from './AdminQueueScreen';
+export { AdminDashboardScreen } from './AdminDashboardScreen';
+export { AdminAddArtisanScreen } from './AdminAddArtisanScreen';

@@ -26,6 +26,8 @@ import {
   VerificationPendingScreen,
   ArtisanDashboardScreen,
   AdminQueueScreen,
+  AdminDashboardScreen,
+  AdminAddArtisanScreen,
 } from './screens';
 
 const PROTECTED_SCREENS = new Set([
@@ -104,6 +106,10 @@ export function AppContent() {
 
       case 'admin_queue':
         return <AdminQueueScreen />;
+      case 'admin_add_artisan':
+        return <AdminAddArtisanScreen />;
+      case 'admin_dash':
+        return <AdminDashboardScreen />;
 
       case 'not_found':
       default:

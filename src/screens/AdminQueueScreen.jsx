@@ -38,7 +38,7 @@ export function AdminQueueScreen() {
 
   return (
     <div className="min-h-screen bg-[#F4F8F8] pb-12">
-      <Header title="Admin Verification Queue" backTo="onboarding" />
+      <Header title="Admin Verification Queue" backTo="admin_dash" />
 
       <main className="max-w-md mx-auto px-4 py-4 space-y-4 animate-fade-in">
         
@@ -53,8 +53,16 @@ export function AdminQueueScreen() {
           </div>
           <h1 className="text-xl font-bold font-['Outfit']">NIN & Credentials Review</h1>
           <p className="text-xs text-purple-200">
-            Review and approve pending artisan profiles before they go live in Lagos Estates.
+            Review and approve pending artisan profiles before they go live in Life Camp Abuja.
           </p>
+          <div className="pt-2">
+            <button
+              onClick={() => navigateTo('admin_add_artisan')}
+              className="w-full py-2 bg-white text-purple-900 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-100 transition-colors"
+            >
+              + Add Artisan Manually
+            </button>
+          </div>
         </div>
 
         <div className="bg-red-50 border border-red-200 p-4 rounded-3xl shadow-sm">
@@ -76,7 +84,7 @@ export function AdminQueueScreen() {
           <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center space-y-3">
             <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
             <h3 className="font-bold text-[#0E3B40]">Queue Clear!</h3>
-            <p className="text-xs text-slate-500">All submitted artisan profiles in Lagos Estates have been verified.</p>
+            <p className="text-xs text-slate-500">All submitted artisan profiles in Life Camp Abuja have been verified.</p>
             <button
               onClick={() => navigateTo('client_dash')}
               className="px-4 py-2.5 bg-[#16858F] text-white text-xs font-bold rounded-xl"

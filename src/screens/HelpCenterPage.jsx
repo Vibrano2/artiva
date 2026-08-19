@@ -9,7 +9,7 @@ const helpTopics = [
     id: 'finding',
     title: 'Finding and hiring an artisan',
     description: 'How to browse profiles, compare quotes, and submit a job request.',
-    details: 'You can explore artisans by trade (Plumbing, Electrical, Carpentry, AC Repair, Painting, Masonry) and location in Lagos. Once you submit a job post with your requirements, Artiva matches you with proximity-ranked verified craftspeople ready to accept your request.'
+    details: 'You can explore artisans by trade (Plumbing, Electrical, Carpentry, AC Repair, Painting, Masonry) and location in Life Camp Abuja. Once you submit a job post with your requirements, Artiva matches you with proximity-ranked verified craftspeople ready to accept your request.'
   },
   {
     id: 'escrow',

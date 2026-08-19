@@ -40,7 +40,7 @@ export function Navbar({ activeTab = 'home' }) {
           className="cursor-pointer flex items-center gap-2 flex-shrink-0"
           onClick={() => handleNavClick('home')}
         >
-          <ArtivaLogo size="md" showWordmark={true} />
+          <ArtivaLogo size="md" showWordmark={true} lightMode={true} />
         </div>
 
         <nav className="hidden lg:flex items-center gap-6">

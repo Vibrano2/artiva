@@ -92,7 +92,7 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
 
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                2. Location in Lagos
+                2. Location
               </label>
               <div className="relative">
                 <select
@@ -137,7 +137,7 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Water leak under kitchen sink in VGC estate flat. Needs urgent pipe repair."
+                placeholder="e.g. Water leak under kitchen sink in Life Camp flat. Needs urgent pipe repair."
                 rows={3}
                 className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
                 required

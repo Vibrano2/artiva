@@ -37,7 +37,7 @@ export function BecomeArtisanPage() {
               Get More Jobs. Build Your Reputation. Grow Your Business.
             </h1>
             <p className="text-xs sm:text-base text-slate-200 max-w-xl mx-auto leading-relaxed">
-              Join Lagos's trusted network of verified artisans. Receive direct job requests with guaranteed escrow payouts.
+              Join Abuja's trusted network of verified artisans. Receive direct job requests with guaranteed escrow payouts.
             </p>
 
             <div className="pt-4">

@@ -21,7 +21,7 @@ export function HowItWorksPage() {
   const artisanSteps = [
     { num: 1, title: 'Create an Artisan Account', desc: 'Sign up with your phone number and specify your core trade.' },
     { num: 2, title: 'Complete Verification', desc: 'Provide your ID and work portfolio photos for admin review.' },
-    { num: 3, title: 'Build Your Profile', desc: 'Select specific service chips and set your availability in Lagos.' },
+    { num: 3, title: 'Build Your Profile', desc: 'Select specific service chips and set your availability in Life Camp Abuja.' },
     { num: 4, title: 'Receive Job Opportunities', desc: 'Get matched directly with client job requests in your local area.' },
     { num: 5, title: 'Accept & Agree on Job', desc: 'Confirm availability and communicate with the client.' },
     { num: 6, title: 'Complete the Work', desc: 'Deliver quality craftsmanship on site.' },

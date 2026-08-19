@@ -32,6 +32,10 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       setError('You must accept the Terms and Privacy Policy to proceed.');
       return;
     }
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid phone number.');
+      return;
+    }
 
     setError(null);
     setLoading(true);
@@ -44,6 +48,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       }
 
       const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+      console.log('Sending OTP with:', { auth, formattedPhone, recaptchaVerifier: window.recaptchaVerifier });
+      
       const confirmation = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
       setConfirmationResult(confirmation);
       
@@ -52,12 +58,14 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       showToast(`OTP sent to ${formattedPhone}`, 'success');
       startTimer();
     } catch (err) {
-      console.error(err);
+      console.error('Firebase Auth Error:', err);
       setLoading(false);
-      setError(err.message || 'Failed to send OTP');
+      setError(`${err.code || 'Error'}: ${err.message}`);
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = null;
+        const container = document.getElementById('recaptcha-container');
+        if (container) container.innerHTML = '';
       }
     }
   };
@@ -181,6 +189,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
             </div>
           )}
 
+          <div id="recaptcha-container"></div>
+
           {step === 1 ? (
             <form onSubmit={handleSendOtp} className="space-y-[18px]">
               <div className="text-left">
@@ -202,8 +212,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
                   />
                 </div>
               </div>
-
-              <div id="recaptcha-container"></div>
 
               <div 
                 onClick={() => setNdprConsent(!ndprConsent)}
@@ -291,9 +299,11 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         </div>
       </main>
 
+      <div id="recaptcha-container"></div>
+
       <footer className="p-4 text-center text-xs text-[#8a8a8a] flex items-center justify-center gap-1.5 relative z-20 mix-blend-multiply">
         <ShieldCheck className="w-4 h-4" />
-        <span>End-to-End Escrow Protection • Lagos Estates</span>
+        <span>End-to-End Escrow Protection • Life Camp, Abuja</span>
       </footer>
     </div>
   );
