@@ -26,13 +26,17 @@ const clientIcon = new L.Icon({
 });
 
 export function LiveTrackingScreen() {
-  const { navigateTo } = useApp();
+  const { navigateTo, activeJob } = useApp();
 
   const clientLocation = [9.0632, 7.4233]; 
   const [artisanLocation, setArtisanLocation] = useState([9.0550, 7.4100]);
   const [eta, setEta] = useState(12);
 
   useEffect(() => {
+    if (activeJob?.job_id) {
+      ApiService.startTracking(activeJob.job_id).catch(() => {});
+    }
+
     const interval = setInterval(() => {
       setArtisanLocation(prev => {
         const [lat, lng] = prev;
@@ -44,6 +48,9 @@ export function LiveTrackingScreen() {
         if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
           clearInterval(interval);
           setEta(0);
+          if (activeJob?.job_id) {
+            ApiService.arriveTracking(activeJob.job_id).catch(() => {});
+          }
           return [targetLat, targetLng];
         }
 
@@ -57,7 +64,7 @@ export function LiveTrackingScreen() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [activeJob?.job_id]);
 
   return (
     <div className="h-screen w-full bg-slate-50 flex flex-col relative overflow-hidden">

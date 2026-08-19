@@ -91,8 +91,18 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
     try {
       const res = await confirmationResult.confirm(otp);
+      const idToken = await res.user.getIdToken();
+
+      let syncedUser = res.user;
+      try {
+        const syncRes = await ApiService.verifyFirebaseToken(idToken, role);
+        if (syncRes?.user) syncedUser = { ...res.user, ...syncRes.user };
+      } catch (syncErr) {
+        console.warn('Backend user sync warning (proceeding with Firebase session):', syncErr);
+      }
+
       setLoading(false);
-      setCurrentUser(res.user);
+      setCurrentUser(syncedUser);
       setUserRole(role);
       showToast('Authentication successful!', 'success');
 

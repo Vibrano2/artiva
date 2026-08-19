@@ -4,36 +4,44 @@ export const ArtisanService = {
   async signupArtisan(data) {
     const { 
       first_name, last_name, email, password, phone, 
-      trade, services, location, tagline, 
-      work_photos, id_photo, nin 
+      trade, services, skills, location, tagline, bio,
+      hourly_rate, experience_years,
+      work_photos, work_photos_base64, id_photo, id_document_base64, nin, bank_details 
     } = data;
-    
-    if (!trade || !location || !email || !password || !phone) {
-      throw new Error('Please fill in all required contact and trade fields.');
-    }
 
-    const res = await fetchWithAuth('/artisans', {
+    const locObj = typeof location === 'object' ? location : {
+      city: 'Lagos',
+      state: 'Lagos',
+      address: location || 'Lekki Phase 1'
+    };
+
+    const res = await fetchWithAuth('/v1/artisans', {
       method: 'POST',
       body: JSON.stringify({
         first_name,
         last_name,
         email,
-        password,
         phone,
         trade,
-        services: services || [],
-        location,
+        skills: skills || services || [],
+        location: locObj,
         tagline: tagline || `${trade} specialist`,
-        work_photos: work_photos || [],
-        id_photo,
-        nin
+        bio: bio || tagline || '',
+        hourly_rate: hourly_rate || 5000,
+        experience_years: experience_years || 5,
+        nin,
+        bank_details: bank_details || { account_number: '', bank_code: '' },
+        id_document_base64: id_document_base64 || id_photo || '',
+        work_photos_base64: work_photos_base64 || work_photos || []
       })
     });
-    return { artisanId: res.data.uid, artisan: res.data };
+
+    const artisanData = res.data || res.artisan || res;
+    return { artisanId: artisanData.uid || artisanData.id, artisan: artisanData };
   },
 
   async updateAvailability(uid, available) {
-    const res = await fetchWithAuth(`/artisans/${uid}/availability`, {
+    const res = await fetchWithAuth(`/v1/artisans/${uid}/availability`, {
       method: 'PATCH',
       body: JSON.stringify({ is_available: available })
     });
@@ -42,17 +50,17 @@ export const ArtisanService = {
 
   async getArtisans(filter = {}) {
     const query = new URLSearchParams();
-    if (filter.trade) query.append('trade', filter.trade);
-    if (filter.location) query.append('location', filter.location);
+    if (filter.trade && filter.trade !== 'All') query.append('trade', filter.trade);
+    if (filter.location && filter.location !== 'All') query.append('location', filter.location);
     if (filter.available !== undefined) query.append('available', filter.available);
     
-    const res = await fetchWithAuth(`/artisans?${query.toString()}`);
-    return res.data || [];
+    const res = await fetchWithAuth(`/v1/artisans?${query.toString()}`);
+    return res.data || (Array.isArray(res) ? res : []);
   },
 
   async getArtisanDashboard(uid) {
-    const res = await fetchWithAuth(`/artisans/${uid}/dashboard`);
-    const dashboardData = res.data || {};
+    const res = await fetchWithAuth(`/v1/artisans/${uid}/dashboard`);
+    const dashboardData = res.data || res || {};
     
     return {
       held_total: dashboardData.held_total || 0,
@@ -64,7 +72,7 @@ export const ArtisanService = {
   },
   
   async getArtisanProfile(uid) {
-    const res = await fetchWithAuth(`/artisans/${uid}`);
-    return res.data;
+    const res = await fetchWithAuth(`/v1/artisans/${uid}`);
+    return res.data || res;
   }
 };

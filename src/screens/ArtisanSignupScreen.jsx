@@ -7,7 +7,7 @@ import { Wrench, ShieldCheck, ArrowRight, Upload, Phone, FileText } from 'lucide
 import { VideoOverlay } from '../components/VideoOverlay';
 
 export function ArtisanSignupScreen() {
-  const { navigateTo, setCurrentUser, setUserRole, showToast } = useApp();
+  const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
 
   const [step, setStep] = useState(1);
   const [cardVisible, setCardVisible] = useState(false);
@@ -63,9 +63,8 @@ export function ArtisanSignupScreen() {
     setError(null);
 
     try {
-      const { currentUser } = useApp.getState ? useApp.getState() : { currentUser: {} };
-      const firstName = currentUser?.firstName || '';
-      const lastName = currentUser?.lastName || '';
+      const firstName = currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || 'Artisan';
+      const lastName = currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '';
       
       const res = await ApiService.signupArtisan({
         first_name: firstName,

@@ -22,13 +22,21 @@ export function PaystackCheckoutModal({ job, artisan }) {
     setErrorMsg(null);
 
     try {
+      if (targetJob?.job_id && targetArtisan?.uid) {
+        try {
+          await ApiService.selectArtisan(targetJob.job_id, targetArtisan.uid);
+        } catch (selErr) {
+          console.warn('Select artisan notice:', selErr);
+        }
+      }
+
       await ApiService.initializePayment(targetJob.job_id, targetArtisan.uid);
 
       setTimeout(async () => {
         setLoading(false);
         setPaymentState('success');
         showToast('Match fee held in escrow successfully!', 'success');
-      }, 1500);
+      }, 1200);
 
     } catch (err) {
       setLoading(false);

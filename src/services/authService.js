@@ -5,45 +5,34 @@ const STORAGE_KEYS = {
 };
 
 export const AuthService = {
-  async sendOtp(email) {
-    return await fetchWithAuth('/auth/send-otp', {
+  async register(idToken, first_name, last_name, role = 'client') {
+    const data = await fetchWithAuth('/v1/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email })
-    });
-  },
-
-  async verifyOtp(email, otp, role) {
-    const data = await fetchWithAuth('/auth/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify({ email, otp, role })
+      body: JSON.stringify({ idToken, first_name, last_name, role })
     });
     
     const user = {
-      ...data.user,
-      token: data.token,
+      ...(data.data || data.user || data),
+      token: idToken,
     };
     
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: user.token, user };
+    return { token: idToken, user };
   },
 
-  async authenticateWithEmail(idToken, role = 'client', userData = {}) {
-    const data = await fetchWithAuth('/auth/email/verify', {
+  async verifyFirebaseToken(idToken, role = 'client') {
+    const data = await fetchWithAuth('/v1/auth/firebase/verify', {
       method: 'POST',
       body: JSON.stringify({ idToken, role })
     });
-
+    
     const user = {
-      uid: data.data.uid,
-      email: data.data.email || userData.email,
-      first_name: data.data.first_name,
-      last_name: data.data.last_name,
-      role: data.data.role,
+      ...(data.data || data.user || data),
       token: idToken,
     };
-
+    
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: user.token, user };
+    return { token: idToken, user };
   },
 
   logout() {
