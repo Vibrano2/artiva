@@ -17,10 +17,6 @@ export function ArtisanSignupScreen() {
   const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
   const [lastName, setLastName] = useState(currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '');
   const [phone, setPhone] = useState(currentUser?.phoneNumber || '');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(!!currentUser?.phoneNumber);
-  const [confirmationResult, setConfirmationResult] = useState(null);
   
   const [experienceYears, setExperienceYears] = useState('');
   const [trade, setTrade] = useState(ALL_TRADES[0]);
@@ -54,46 +50,8 @@ export function ArtisanSignupScreen() {
       if (!experienceYears) return setError('Please provide your years of experience.');
       if (!phone.trim() || phone.length < 10) return setError('Please provide a valid phone number.');
       
-      if (!otpVerified) {
-        if (!otpSent) {
-          // Send OTP
-          setLoading(true);
-          try {
-            const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-            await ApiService.sendPhoneOtp(formattedPhone);
-            setOtpSent(true);
-            setLoading(false);
-            showToast(`OTP sent to ${formattedPhone}`, 'success');
-          } catch (err) {
-            console.error(err);
-            setLoading(false);
-            setError(err.message || 'Failed to send OTP');
-          }
-          return;
-        } else {
-          // Verify OTP
-          if (!otp || otp.length < 6) return setError('Please enter the 6-digit OTP.');
-          setLoading(true);
-          try {
-            const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-            const res = await ApiService.verifyPhoneOtp(formattedPhone, otp, 'artisan');
-            if (res.token) {
-              await signInWithCustomToken(auth, res.token);
-            }
-            setOtpVerified(true);
-            setLoading(false);
-            showToast('Phone number verified!', 'success');
-            // If they just verified, let them proceed if everything else is fine
-            setStep(step + 1);
-            return;
-          } catch (err) {
-            console.error(err);
-            setLoading(false);
-            setError('Invalid OTP code. Please try again.');
-            return;
-          }
-        }
-      }
+      setStep(step + 1);
+      return;
     }
     if (step === 2 && !tagline) {
       setError('Please provide a short tagline or bio.');
@@ -219,7 +177,6 @@ export function ArtisanSignupScreen() {
                   onChange={(e) => setExperienceYears(e.target.value)}
                   placeholder="e.g. 5"
                   className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                  disabled={otpSent && !otpVerified}
                 />
               </div>
 
@@ -236,32 +193,9 @@ export function ArtisanSignupScreen() {
                     placeholder="803 123 4567"
                     className="w-full p-[13px_14px] text-[15px] text-[#222] outline-none bg-transparent"
                     maxLength={10}
-                    disabled={otpVerified || otpSent}
                   />
                 </div>
               </div>
-
-              {otpSent && !otpVerified && (
-                <div className="animate-fade-in">
-                  <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Enter 6-Digit OTP</label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                    placeholder="• • • • • •"
-                    className="w-full p-[13px_14px] text-[15px] tracking-[0.4em] text-center font-bold text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                    maxLength={6}
-                    autoFocus
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => { setOtpSent(false); setOtp(''); }}
-                    className="text-[12px] font-bold text-[#16858F] mt-2 text-center w-full hover:underline"
-                  >
-                    Change Phone Number
-                  </button>
-                </div>
-              )}
 
               <div>
                 <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Primary Estate</label>
@@ -286,7 +220,7 @@ export function ArtisanSignupScreen() {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>{(!otpVerified && !otpSent) ? 'Send OTP & Continue' : (!otpVerified ? 'Verify OTP & Continue' : 'Continue')}</span>
+                    <span>Continue</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
