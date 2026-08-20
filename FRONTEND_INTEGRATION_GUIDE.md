@@ -10,18 +10,7 @@ Place the following keys in your frontend environment file (`.env` / `.env.devel
 
 ```env
 # Backend Base API URL
-VITE_API_BASE_URL=https://us-central1-artiva-a0594.cloudfunctions.net/api
-
-# Firebase Web Client SDK Config
-VITE_FIREBASE_API_KEY=AIzaSyA5u_VUZZIzV5-0JD48JhQ127T9c6o5LgI
-VITE_FIREBASE_AUTH_DOMAIN=artiva-a0594.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=artiva-a0594
-VITE_FIREBASE_STORAGE_BUCKET=artiva-a0594.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=140829451221
-VITE_FIREBASE_APP_ID=1:140829451221:web:44ea0b64ddb5dab339535c
-
-# Paystack Public Key
-VITE_PAYSTACK_PUBLIC_KEY=pk_test_your_paystack_public_key_here
+VITE_API_BASE_URL=https://us-central1-artiva-f24a8.cloudfunctions.net/api
 ```
 
 ---
@@ -50,31 +39,46 @@ export async function getAuthHeaders() {
 }
 ```
 
-### A. New User Registration
+### A. Send OTP
 
-**Endpoint**: `POST /v1/auth/register`
+**Endpoint**: `POST /api/auth/phone/send-otp`
 
 **Payload**:
 
 ```json
 {
-  "idToken": "<firebase_id_token>",
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "role": "client"
+  "phone": "+2348012345678"
 }
 ```
 
-### B. Returning User Login Sync
+**Response**:
 
-**Endpoint**: `POST /v1/auth/firebase/verify`
+```json
+{
+  "success": true,
+  "message": "OTP sent"
+}
+```
+
+### B. Verify OTP & Create Session
+
+**Endpoint**: `POST /api/auth/phone/verify-otp`
 
 **Payload**:
 
 ```json
 {
-  "idToken": "<firebase_id_token>",
-  "role": "client"
+  "phone": "+2348012345678",
+  "otp": "123456"
+}
+```
+
+**Response**:
+
+```json
+{
+  "token": "<firebase_id_token>",
+  "user": { "uid": "...", "phone": "...", "role": "client" }
 }
 ```
 
@@ -84,32 +88,29 @@ export async function getAuthHeaders() {
 
 ### A. Register Artisan Profile
 
-**Endpoint**: `POST /v1/artisans`
+**Endpoint**: `POST /api/artisans`
 
-**Payload**:
+**Headers**: `Authorization: Bearer <idToken>`
+
+**Payload** (3-step signup):
+
+> [!WARNING]
+> **DO NOT make an API request on Step 1 or 2!** Keep the user's input in React state/memory. Send this payload **ONLY** on the final step submission when all fields are populated.
 
 ```json
 {
-  "idToken": "<firebase_id_token>",
   "first_name": "Ade",
   "last_name": "Ogunleye",
   "trade": "Plumbing",
+  "services": ["Pipe Fitting", "Drain Cleaning", "Water Heaters"],
   "location": {
     "city": "Ikeja",
     "state": "Lagos",
     "lga": "Ikeja",
     "address": "14 Allen Avenue"
   },
-  "tagline": "Master Plumber & Pipe Specialist",
-  "bio": "10+ years installing industrial and residential piping.",
-  "hourly_rate": 5000,
   "experience_years": 10,
-  "skills": ["Pipe Fitting", "Drain Cleaning", "Water Heaters"],
   "nin": "12345678901",
-  "bank_details": {
-    "account_number": "0123456789",
-    "bank_code": "058"
-  },
   "id_document_base64": "data:image/jpeg;base64,...",
   "work_photos_base64": [
     "data:image/jpeg;base64,...",
@@ -118,9 +119,15 @@ export async function getAuthHeaders() {
 }
 ```
 
-### B. Search & Browse Verified Artisans
+### B. Toggle Artisan Availability
 
-**Endpoint**: `GET /v1/artisans?trade=Plumbing&location=Lagos&available=true`
+**Endpoint**: `PATCH /api/artisans/:uid/availability`
+
+**Headers**: `Authorization: Bearer <idToken>` (artisan only)
+
+### C. Search & Browse Verified Artisans
+
+**Endpoint**: `GET /api/artisans?trade=Plumbing&location=Lagos&available=true`
 
 **Response**:
 
@@ -131,8 +138,6 @@ export async function getAuthHeaders() {
     {
       "uid": "artisan_123",
       "trade": "Plumbing",
-      "tagline": "Master Plumber & Pipe Specialist",
-      "hourly_rate": 5000,
       "reputation_score": 4.9,
       "completed_jobs": 28,
       "work_photos": ["https://storage.googleapis.com/..."]
@@ -140,6 +145,72 @@ export async function getAuthHeaders() {
   ]
 }
 ```
+
+### D. Get Artisan Profile
+
+**Endpoint**: `GET /api/artisans/:id`
+
+**Headers**: `Authorization: Bearer <idToken>`
+
+> `nin` and `id_document_url` are never returned to non-admin callers.
+
+### E. Get Artisan Dashboard
+
+**Endpoint**: `GET /api/artisans/:uid/dashboard`
+
+**Headers**: `Authorization: Bearer <idToken>` (must match `uid`)
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Dashboard data fetched successfully",
+  "data": {
+    "held_total": 25000,
+    "released_total": 75000,
+    "completed_jobs": 4,
+    "reputation_score": 4.8,
+    "is_verified": true
+  }
+}
+```
+
+### F. Update Artisan Profile
+
+**Endpoint**: `PATCH /api/artisans/:uid/profile`
+
+**Headers**: `Authorization: Bearer <idToken>` (must match `uid`)
+
+**Payload**:
+```json
+{
+  "trade": "Plumbing",
+  "location": {
+    "city": "Lagos",
+    "state": "Lagos",
+    "lga": "Ikeja"
+  }
+}
+```
+
+### G. Upload Work Photo
+
+**Endpoint**: `POST /api/artisans/:uid/photo`
+
+**Headers**: `Authorization: Bearer <idToken>` (must match `uid`), `Content-Type: multipart/form-data`
+
+**Payload**:
+`file`: The image file (JPG, PNG)
+
+### H. Upload ID Document
+
+**Endpoint**: `POST /api/artisans/:uid/id-document`
+
+**Headers**: `Authorization: Bearer <idToken>` (must match `uid`), `Content-Type: multipart/form-data`
+
+**Payload**:
+`nin`: String representation of the National Identity Number
+`file`: The image file for the ID document (JPG, PNG, PDF)
 
 ---
 
@@ -152,21 +223,19 @@ sequenceDiagram
     participant Paystack as Paystack Gateway
     participant Artisan as Artisan (Frontend)
 
-    Client->>Backend: 1. POST /v1/jobs (Post job)
-    Client->>Backend: 2. POST /api/jobs/:id/match (Match artisans)
-    Client->>Backend: 3. GET /api/jobs/:id/matches (Get ranked matches)
-    Client->>Backend: 4. POST /v1/jobs/:id/select-artisan (Select artisan)
-    Client->>Paystack: 5. Pay Job Amount (Escrow deposit)
-    Client->>Backend: 6. POST /v1/payments/verify (Verify & lock funds in escrow)
-    Artisan->>Backend: 7. POST /v1/jobs/:id/tracking/start (En route)
-    Artisan->>Backend: 8. POST /v1/jobs/:id/tracking/arrive (Arrived)
-    Client->>Backend: 9. POST /v1/jobs/:id/complete (Mark complete & Rate)
-    Backend->>Paystack: 10. Auto-release Escrow transfer to Artisan
+    Client->>Backend: 1. POST /api/jobs (Post job)
+    Client->>Backend: 2. GET /api/jobs/:id/matches (Get ranked matches)
+    Client->>Backend: 3. POST /api/payments/initialize (Consolidated checkout)
+    Client->>Paystack: 4. Pay job value + ₦500 fee (Escrow deposit)
+    Backend->>Backend: 5. Webhook received — escrow HELD, chat unlocked
+    Artisan->>Backend: 6. POST /api/chat/:matchId/messages (First message starts no-response timer)
+    Client->>Backend: 7. POST /api/jobs/:id/complete (Mark complete & Rate)
+    Backend->>Paystack: 8. Auto-release Escrow transfer to Artisan
 ```
 
 ### Step 1: Create Job
 
-**Endpoint**: `POST /v1/jobs`
+**Endpoint**: `POST /api/jobs`
 
 **Headers**: `Authorization: Bearer <idToken>`
 
@@ -185,79 +254,185 @@ sequenceDiagram
 }
 ```
 
-### Step 2: Trigger Matching
-
-**Endpoint**: `POST /api/jobs/:id/match`
-
-**Headers**: `Authorization: Bearer <idToken>`
-
-### Step 3: Fetch Matches
+### Step 2: Fetch Matches
 
 **Endpoint**: `GET /api/jobs/:id/matches`
 
 **Headers**: `Authorization: Bearer <idToken>`
 
-### Step 4: Select Artisan
+### Step 3: Consolidated Escrow Payment via Paystack
 
-**Endpoint**: `POST /v1/jobs/:id/select-artisan`
+> [!IMPORTANT]
+> The backend collects job value + ₦500 platform fee in a **single** Paystack transaction. Both amounts are itemized on the checkout screen and receipt. Do not rely on frontend calculations.
+
+**Endpoint**: `POST /api/payments/initialize`
 
 **Headers**: `Authorization: Bearer <idToken>`
 
 **Payload**:
-
 ```json
 {
-  "artisan_id": "artisan_uid_123"
+  "match_id": "match_uid_456",
+  "job_value": 20000
 }
 ```
 
-### Step 5: Escrow Payment via Paystack
-
-```javascript
-const handler = window.PaystackPop.setup({
-  key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-  email: user.email,
-  amount: job.budget * 100,
-  currency: 'NGN',
-  callback: async (response) => {
-    await fetch(`${import.meta.env.VITE_API_BASE_URL}/v1/payments/verify`, {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({ reference: response.reference })
-    });
-  }
-});
-handler.openIframe();
-```
-
-### Step 6: Live Tracking
-
-- **Artisan starts journey**: `POST /v1/jobs/:id/tracking/start`
-- **Artisan arrives on site**: `POST /v1/jobs/:id/tracking/arrive`
-
-The frontend can listen directly to Firestore document `/jobs/:id` for status transitions (`en_route` -> `arrived`).
-
-### Step 7: Mark Job Complete & Release Escrow
-
-**Endpoint**: `POST /v1/jobs/:id/complete`
-
-**Headers**: `Authorization: Bearer <idToken>`
-
-**Payload**:
-
+**Response**:
 ```json
 {
-  "match_id": "match_uid_123",
+  "message": "Payment initialized successfully",
+  "transaction_id": "tx_abc123",
+  "authorization_url": "https://checkout.paystack.com/...",
+  "access_code": "..."
+}
+```
+*Frontend Action: Redirect the user to the `authorization_url` to complete payment. Paystack will send a webhook to the backend to lock the funds in Escrow and open the in-app chat thread.*
+
+### Step 4: In-App Chat (after payment confirmed)
+
+- Chat is available **only** after the Paystack webhook confirms payment.
+
+### 4. No-Response Auto-Refund & Suspensions
+
+If the assigned artisan does not send an in-app message before the `no_response_timer_expiry` (dynamically set based on job urgency), the system automatically refunds the client. 
+- **Urgency "Today":** 2-hour timer.
+- **Urgency "This Week":** 4-hour timer.
+- **Urgency "Flexible":** 12-hour timer.
+
+The artisan receives a "no-response flag" (`no_response_flags` increments). 
+> [!WARNING] 
+> If an artisan reaches 2 or more flags, their profile is **automatically suspended** (`verified: false`, `available: false`).
+
+---
+
+### Mark Job Complete
+**POST** `/api/jobs/:id/complete`
+
+**Headers**: `Authorization: Bearer <idToken>` (client only)
+
+**Payload**:
+```json
+{
   "rating": 5,
-  "review": "Punctual, fast, and fixed the pipe completely!"
+  "review": "Excellent work on the plumbing"
 }
 ```
+
+### Dispute Job
+**POST** `/api/jobs/:id/dispute`
+
+**Headers**: `Authorization: Bearer <idToken>` (client or assigned artisan)
+
+**Payload**:
+```json
+{
+  "reason": "Artisan didn't finish the work properly"
+}
+```
+*Note: This freezes the escrow funds (`DISPUTED`) and alerts admins.*
 
 ---
 
 ## 5. Admin Queue & Verification Endpoints
 
-- **Fetch Pending Artisans**: `GET /v1/admin/artisans/pending`
-- **Approve Artisan**: `PATCH /v1/admin/artisans/:uid/verify` with `{ "verified": true }`
-- **Reject Artisan**: `PATCH /v1/admin/artisans/:uid/verify` with `{ "verified": false, "reason": "Unclear ID document" }`
-- **Resolve Dispute**: `POST /v1/admin/disputes/:id/resolve` with `{ "action": "refund_client" | "payout_artisan" }`
+- **Fetch Pending Artisans**: `GET /api/admin/verification-queue`
+- **Approve Artisan**: `POST /api/admin/verify/:uid`
+- **Reject Artisan**: `POST /api/admin/reject/:uid` (Send `{"reason": "..."}`)
+- **Platform Stats**: `GET /api/admin/analytics`
+- **Non-response Flags**: `GET /api/admin/flags`
+
+---
+
+## 6. Chat & Messaging
+
+**Endpoint Base**: `/api/chat/:matchId/messages`
+
+> [!NOTE]
+> Only the Client who created the job and the Artisan assigned to the job have access to these endpoints. Chat is text-only — no media or file sharing.
+
+### Fetch Messages
+**GET** `/api/chat/:matchId/messages`
+
+**Headers**: `Authorization: Bearer <idToken>`
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "messages": [
+      {
+        "id": "msg_123",
+        "sender_uid": "user_456",
+        "content": "I am on my way!",
+        "is_read": false,
+        "sent_at": "2024-05-20T10:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+### Send Message
+**POST** `/api/chat/:matchId/messages`
+
+**Headers**: `Authorization: Bearer <idToken>`
+
+**Payload**:
+```json
+{
+  "content": "Are you here yet?"
+}
+```
+
+---
+
+## 7. Proforma Invoices (Material Escrow)
+
+> [!NOTE]
+> For material-inclusive jobs, the artisan never receives raw cash for materials. Instead, a supplier proforma invoice is submitted and the platform pays the supplier directly from escrow.
+
+### Artisan Submits Invoice
+**POST** `/api/proforma/submit`
+
+**Headers**: `Authorization: Bearer <idToken>` (artisan only)
+
+**Payload**:
+```json
+{
+  "job_id": "job_123",
+  "supplier_name": "Lekki Plumbing Supplies",
+  "total_amount": 15000,
+  "invoice_document_url": "https://storage.googleapis.com/..."
+}
+```
+
+### Get Job Proformas
+**GET** `/api/proforma/job/:jobId`
+
+**Headers**: `Authorization: Bearer <idToken>` (client or assigned artisan)
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Proforma invoices fetched successfully",
+  "data": {
+    "invoices": [
+      {
+        "id": "prof_abc123",
+        "job_id": "job_123",
+        "supplier_name": "Lekki Plumbing Supplies",
+        "total_amount": 15000,
+        "status": "pending",
+        "invoice_document_url": "https://storage.googleapis.com/..."
+      }
+    ]
+  }
+}
+```
+
+### Admin Proforma Endpoints
+- **GET** `/api/admin/proforma-queue` — List all pending proformas
+- **POST** `/api/admin/proforma/:id/approve` — Triggers direct payout to supplier from escrow
+- **POST** `/api/admin/proforma/:id/reject` — Payload: `{"reason": "Invalid pricing"}`
