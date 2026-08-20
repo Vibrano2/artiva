@@ -15,7 +15,7 @@ export const ArtisanService = {
       address: location || 'Life Camp, Abuja'
     };
 
-    const res = await fetchWithAuth('/v1/artisans', {
+    const res = await fetchWithAuth('/api/artisans', {
       method: 'POST',
       body: JSON.stringify({
         first_name,
@@ -41,7 +41,7 @@ export const ArtisanService = {
   },
 
   async updateAvailability(uid, available) {
-    const res = await fetchWithAuth(`/v1/artisans/${uid}/availability`, {
+    const res = await fetchWithAuth(`/api/artisans/${uid}/availability`, {
       method: 'PATCH',
       body: JSON.stringify({ is_available: available })
     });
@@ -54,12 +54,12 @@ export const ArtisanService = {
     if (filter.location && filter.location !== 'All') query.append('location', filter.location);
     if (filter.available !== undefined) query.append('available', filter.available);
     
-    const res = await fetchWithAuth(`/v1/artisans?${query.toString()}`);
+    const res = await fetchWithAuth(`/api/artisans?${query.toString()}`);
     return res.data || (Array.isArray(res) ? res : []);
   },
 
   async getArtisanDashboard(uid) {
-    const res = await fetchWithAuth(`/v1/artisans/${uid}/dashboard`);
+    const res = await fetchWithAuth(`/api/artisans/${uid}/dashboard`);
     const dashboardData = res.data || res || {};
     
     return {
@@ -72,7 +72,7 @@ export const ArtisanService = {
   },
   
   async getArtisanProfile(uid) {
-    const res = await fetchWithAuth(`/v1/artisans/${uid}`);
+    const res = await fetchWithAuth(`/api/artisans/${uid}`);
     return res.data || res;
   }
 };

@@ -2,13 +2,13 @@ import { fetchWithAuth } from './apiConfig';
 
 export const ProformaService = {
   submitProformaInvoice: async (data) => {
-    return fetchWithAuth(`/v1/proforma`, {
+    return fetchWithAuth(`/api/proforma`, {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
   
   getJobProformas: async (jobId) => {
-    return fetchWithAuth(`/v1/proforma/job/${jobId}`);
+    return fetchWithAuth(`/api/proforma/job/${jobId}`);
   }
 };

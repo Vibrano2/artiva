@@ -9,7 +9,7 @@ export const JobService = {
       state: 'FCT'
     };
 
-    const res = await fetchWithAuth('/v1/jobs', {
+    const res = await fetchWithAuth('/api/jobs', {
       method: 'POST',
       body: JSON.stringify({
         trade,
@@ -27,7 +27,7 @@ export const JobService = {
   },
 
   async getJobById(id) {
-    const res = await fetchWithAuth(`/v1/jobs/${id}`);
+    const res = await fetchWithAuth(`/api/jobs/${id}`);
     return res.data || res;
   },
 
@@ -35,7 +35,7 @@ export const JobService = {
     try {
       return await fetchWithAuth(`/api/jobs/${jobId}/match`, { method: 'POST' });
     } catch {
-      return await fetchWithAuth(`/v1/jobs/${jobId}/match`, { method: 'POST' });
+      return await fetchWithAuth(`/api/jobs/${jobId}/match`, { method: 'POST' });
     }
   },
 
@@ -44,13 +44,13 @@ export const JobService = {
       const res = await fetchWithAuth(`/api/jobs/${jobId}/matches`);
       return res.data || (Array.isArray(res) ? res : []);
     } catch {
-      const fallbackRes = await fetchWithAuth(`/v1/jobs/${jobId}/matches`);
+      const fallbackRes = await fetchWithAuth(`/api/jobs/${jobId}/matches`);
       return fallbackRes.data || (Array.isArray(fallbackRes) ? fallbackRes : []);
     }
   },
 
   async selectArtisan(jobId, artisanId) {
-    const res = await fetchWithAuth(`/v1/jobs/${jobId}/select-artisan`, {
+    const res = await fetchWithAuth(`/api/jobs/${jobId}/select-artisan`, {
       method: 'POST',
       body: JSON.stringify({ artisan_id: artisanId })
     });
@@ -58,20 +58,20 @@ export const JobService = {
   },
 
   async startTracking(jobId) {
-    return await fetchWithAuth(`/v1/jobs/${jobId}/tracking/start`, {
+    return await fetchWithAuth(`/api/jobs/${jobId}/tracking/start`, {
       method: 'POST'
     });
   },
 
   async arriveTracking(jobId) {
-    return await fetchWithAuth(`/v1/jobs/${jobId}/tracking/arrive`, {
+    return await fetchWithAuth(`/api/jobs/${jobId}/tracking/arrive`, {
       method: 'POST'
     });
   },
 
   async completeJob(jobId, details = {}) {
     const payload = typeof details === 'object' ? details : { match_id: details, rating: 5, review: '' };
-    const res = await fetchWithAuth(`/v1/jobs/${jobId}/complete`, {
+    const res = await fetchWithAuth(`/api/jobs/${jobId}/complete`, {
       method: 'POST',
       body: JSON.stringify({
         match_id: payload.match_id || `match_${jobId}`,

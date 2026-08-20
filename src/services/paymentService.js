@@ -3,7 +3,7 @@ import { fetchWithAuth } from './apiConfig';
 export const PaymentService = {
   async initializePayment(matchId, jobValue) {
     try {
-      const res = await fetchWithAuth(`/v1/payments/initialise`, {
+      const res = await fetchWithAuth(`/api/payments/initialise`, {
         method: 'POST',
         body: JSON.stringify({ match_id: matchId, job_value: jobValue })
       });
@@ -15,7 +15,7 @@ export const PaymentService = {
   },
 
   async verifyPayment(reference) {
-    const res = await fetchWithAuth(`/v1/payments/verify`, {
+    const res = await fetchWithAuth(`/api/payments/verify`, {
       method: 'POST',
       body: JSON.stringify({ reference })
     });

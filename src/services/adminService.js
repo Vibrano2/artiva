@@ -2,18 +2,18 @@ import { fetchWithAuth } from './apiConfig';
 
 export const AdminService = {
   async getAdminQueue() {
-    const res = await fetchWithAuth('/v1/admin/verification-queue');
+    const res = await fetchWithAuth('/api/admin/verification-queue');
     return res.data || (Array.isArray(res) ? res : []);
   },
 
   async verifyArtisan(uid, verified = true, reason = '') {
     if (verified) {
-      const res = await fetchWithAuth(`/v1/admin/verify/${uid}`, {
+      const res = await fetchWithAuth(`/api/admin/verify/${uid}`, {
         method: 'POST'
       });
       return res.data || res;
     } else {
-      const res = await fetchWithAuth(`/v1/admin/reject/${uid}`, {
+      const res = await fetchWithAuth(`/api/admin/reject/${uid}`, {
         method: 'POST',
         body: JSON.stringify({ reason })
       });
@@ -22,7 +22,7 @@ export const AdminService = {
   },
 
   async resolveDispute(disputeId, action = 'refund_client') {
-    const res = await fetchWithAuth(`/v1/admin/disputes/${disputeId}/resolve`, {
+    const res = await fetchWithAuth(`/api/admin/disputes/${disputeId}/resolve`, {
       method: 'POST',
       body: JSON.stringify({ action })
     });
@@ -30,7 +30,7 @@ export const AdminService = {
   },
 
   async addArtisan(data) {
-    const res = await fetchWithAuth('/v1/admin/artisans', {
+    const res = await fetchWithAuth('/api/admin/artisans', {
       method: 'POST',
       body: JSON.stringify(data)
     });
@@ -38,19 +38,19 @@ export const AdminService = {
   },
 
   async getAdminProformaQueue() {
-    const res = await fetchWithAuth('/v1/admin/proforma-queue');
+    const res = await fetchWithAuth('/api/admin/proforma-queue');
     return res.data || (Array.isArray(res) ? res : []);
   },
 
   async approveProforma(id) {
-    const res = await fetchWithAuth(`/v1/admin/proforma/${id}/approve`, {
+    const res = await fetchWithAuth(`/api/admin/proforma/${id}/approve`, {
       method: 'POST'
     });
     return res.data || res;
   },
   
   async rejectProforma(id, reason) {
-    const res = await fetchWithAuth(`/v1/admin/proforma/${id}/reject`, {
+    const res = await fetchWithAuth(`/api/admin/proforma/${id}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reason })
     });
@@ -58,7 +58,7 @@ export const AdminService = {
   },
 
   async getAdminFlags() {
-    const res = await fetchWithAuth('/v1/admin/flags');
+    const res = await fetchWithAuth('/api/admin/flags');
     return res.data || (Array.isArray(res) ? res : []);
   }
 };

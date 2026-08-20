@@ -23,7 +23,7 @@ export function HeroGraphic() {
 
         <div className="relative z-10 w-28 h-28 rounded-full bg-gradient-to-tr from-[#06151F] to-[#0E3B40] flex items-center justify-center shadow-[0_0_60px_rgba(22,133,143,0.35)] border border-[#16858F]/50 opacity-0 animate-[fadeIn_0.5s_cubic-bezier(0.16,1,0.3,1)_0.6s_forwards] scale-[0.9] hover:scale-105 transition-transform duration-500">
           <div className="absolute inset-0 rounded-full bg-[#16D4C6]/10 blur-md -z-10" />
-          <ArtivaLogo size="xl" showWordmark={false} />
+          <ArtivaLogo size="xl" showWordmark={false} lightMode={true} />
         </div>
 
         {icons.map((item, index) => {

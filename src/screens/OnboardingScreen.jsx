@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArtivaLogo } from '../components/ArtivaLogo';
+
 import { useApp } from '../context/AppContext';
 import { HeroGraphic } from '../components/HeroGraphic';
 import { ShieldCheck, Lock, MessageSquare, ArrowRight, UserCheck, Wrench, ShieldAlert } from 'lucide-react';

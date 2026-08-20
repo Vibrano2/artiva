@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://us-central1-artiva-f24a8.cloudfunctions.net/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api-3rceucd62a-uc.a.run.app';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

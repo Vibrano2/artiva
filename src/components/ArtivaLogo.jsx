@@ -11,7 +11,7 @@ export function ArtivaLogo({ size = 'md', showWordmark = true, showTagline = fal
   return (
     <div className="inline-flex items-center gap-2.5 select-none">
       <div className={`relative ${sizeClasses.box} flex-shrink-0`}>
-        <img src={lightMode || isSplash ? "/logo.svg" : "/logo/SVG/Artiva-lo.svg"} alt="Artiva Logo" className="w-full h-full object-contain drop-shadow-sm" />
+        <img src={lightMode ? "/logo.svg" : "/logo/SVG/Artiva-lo.svg"} alt="Artiva Logo" className="w-full h-full object-contain drop-shadow-sm" />
       </div>
 
       {showWordmark && (

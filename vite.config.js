@@ -21,7 +21,7 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/logo.svg',
+            src: '/logo/SVG/Artiva-lo.svg',
             sizes: 'any',
             type: 'image/svg+xml'
           }

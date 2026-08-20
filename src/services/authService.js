@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
 
 export const AuthService = {
   async register(idToken, first_name, last_name, role = 'client') {
-    const data = await fetchWithAuth('/v1/auth/register', {
+    const data = await fetchWithAuth('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ idToken, first_name, last_name, role })
     });
@@ -21,14 +21,14 @@ export const AuthService = {
   },
 
   async sendPhoneOtp(phone) {
-    return await fetchWithAuth('/v1/auth/phone/send-otp', {
+    return await fetchWithAuth('/api/auth/phone/send-otp', {
       method: 'POST',
       body: JSON.stringify({ phone })
     });
   },
 
   async verifyPhoneOtp(phone, otp, role = 'client') {
-    const data = await fetchWithAuth('/v1/auth/phone/verify-otp', {
+    const data = await fetchWithAuth('/api/auth/phone/verify-otp', {
       method: 'POST',
       body: JSON.stringify({ phone, otp, role })
     });
@@ -43,7 +43,7 @@ export const AuthService = {
   },
 
   async verifyFirebaseToken(idToken, role = 'client') {
-    const data = await fetchWithAuth('/v1/auth/firebase/verify', {
+    const data = await fetchWithAuth('/api/auth/firebase/verify', {
       method: 'POST',
       body: JSON.stringify({ idToken, role })
     });

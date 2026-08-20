@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ApiService } from '../services';
+import { auth } from '../config/firebase';
 
 const AppContext = createContext();
 
@@ -175,8 +176,43 @@ export function AppProvider({ children }) {
     setActiveArtisan(null);
     setActiveMatchId(null);
     setCurrentScreen('onboarding');
+    auth.signOut().catch(console.error);
     showToast('Logged out successfully', 'info');
   };
+
+  useEffect(() => {
+    let inactivityTimer;
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      localStorage.setItem('artiva_last_activity', Date.now().toString());
+      if (currentUser) {
+        inactivityTimer = setTimeout(() => {
+          logout();
+          showToast('Session expired due to inactivity', 'warning');
+        }, 30 * 60 * 1000); // 30 minutes
+      }
+    };
+
+    if (currentUser) {
+      const lastActivity = localStorage.getItem('artiva_last_activity');
+      if (lastActivity && Date.now() - parseInt(lastActivity, 10) > 30 * 60 * 1000) {
+        logout();
+        showToast('Session expired', 'warning');
+        return;
+      }
+      
+      resetTimer();
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      const handleActivity = () => resetTimer();
+      events.forEach(event => document.addEventListener(event, handleActivity, { passive: true }));
+      
+      return () => {
+        clearTimeout(inactivityTimer);
+        events.forEach(event => document.removeEventListener(event, handleActivity));
+      };
+    }
+  }, [currentUser]);
 
   const value = {
     currentScreen,
