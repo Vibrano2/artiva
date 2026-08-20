@@ -20,6 +20,28 @@ export const AuthService = {
     return { token: idToken, user };
   },
 
+  async sendPhoneOtp(phone) {
+    return await fetchWithAuth('/v1/auth/phone/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone })
+    });
+  },
+
+  async verifyPhoneOtp(phone, otp, role = 'client') {
+    const data = await fetchWithAuth('/v1/auth/phone/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp, role })
+    });
+    
+    const user = {
+      ...(data.data || data.user || data),
+      token: data.token || data.data?.token,
+    };
+    
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    return user;
+  },
+
   async verifyFirebaseToken(idToken, role = 'client') {
     const data = await fetchWithAuth('/v1/auth/firebase/verify', {
       method: 'POST',

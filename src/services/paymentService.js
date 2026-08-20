@@ -1,11 +1,11 @@
 import { fetchWithAuth } from './apiConfig';
 
 export const PaymentService = {
-  async initializePayment(matchId) {
+  async initializePayment(matchId, jobValue) {
     try {
       const res = await fetchWithAuth(`/v1/payments/initialise`, {
         method: 'POST',
-        body: JSON.stringify({ match_id: matchId })
+        body: JSON.stringify({ match_id: matchId, job_value: jobValue })
       });
       return res.data || res;
     } catch (err) {

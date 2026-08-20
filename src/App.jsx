@@ -28,6 +28,7 @@ import {
   AdminQueueScreen,
   AdminDashboardScreen,
   AdminAddArtisanScreen,
+  AdminProformaQueueScreen,
   ClientArtisanProfileScreen,
   ArtisanProformaScreen,
 } from './screens';
@@ -41,6 +42,7 @@ const PROTECTED_SCREENS = new Set([
   'complete_rating',
   'artisan_pending',
   'admin_queue',
+  'admin_proforma',
   'chat_screen',
   'live_tracking',
 ]);
@@ -116,6 +118,8 @@ export function AppContent() {
         return <AdminAddArtisanScreen />;
       case 'admin_dash':
         return <AdminDashboardScreen />;
+      case 'admin_proforma':
+        return <AdminProformaQueueScreen />;
 
       case 'not_found':
       default:

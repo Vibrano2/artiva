@@ -23,7 +23,7 @@ export function BecomeArtisanPage() {
 
   const handleStartSignup = () => {
     setUserRole('artisan');
-    navigateTo('signup');
+    navigateTo('artisan_signup');
   };
 
   return (

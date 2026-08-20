@@ -83,6 +83,7 @@ export function AdminDashboardScreen() {
           <h2 className="text-sm font-bold text-[#0E3B40] px-1">Operational Queues</h2>
           
           <button
+            onClick={() => navigateTo('admin_proforma')}
             className="w-full bg-white p-4 rounded-2xl border border-amber-200 shadow-sm flex items-center gap-4 hover:border-amber-400 transition-colors btn-press text-left"
           >
             <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0 relative">

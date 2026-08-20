@@ -5,7 +5,7 @@ import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Mail, ShieldCheck, ArrowRight, Check, RefreshCw, KeyRound, Phone } from 'lucide-react';
 import { VideoOverlay } from '../components/VideoOverlay';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '../config/firebase';
 
 export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
@@ -41,32 +41,17 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     setLoading(true);
 
     try {
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-        });
-      }
-
       const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-      console.log('Sending OTP with:', { auth, formattedPhone, recaptchaVerifier: window.recaptchaVerifier });
-      
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
-      setConfirmationResult(confirmation);
+      await ApiService.sendPhoneOtp(formattedPhone);
       
       setLoading(false);
       setStep(2);
       showToast(`OTP sent to ${formattedPhone}`, 'success');
       startTimer();
     } catch (err) {
-      console.error('Firebase Auth Error:', err);
+      console.error('API OTP Error:', err);
       setLoading(false);
       setError(`${err.code || 'Error'}: ${err.message}`);
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
-        const container = document.getElementById('recaptcha-container');
-        if (container) container.innerHTML = '';
-      }
     }
   };
 
@@ -89,25 +74,15 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       setError('Please enter the 6-digit verification code.');
       return;
     }
-    if (!confirmationResult) {
-      setError('Please request a new OTP.');
-      return;
-    }
-
-    setError(null);
-    setLoading(true);
-
     try {
-      const res = await confirmationResult.confirm(otp);
-      const idToken = await res.user.getIdToken();
-
-      let syncedUser = res.user;
-      try {
-        const syncRes = await ApiService.verifyFirebaseToken(idToken, role);
-        if (syncRes?.user) syncedUser = { ...res.user, ...syncRes.user };
-      } catch (syncErr) {
-        console.warn('Backend user sync warning (proceeding with Firebase session):', syncErr);
+      const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+      const syncRes = await ApiService.verifyPhoneOtp(formattedPhone, otp, role);
+      
+      if (syncRes.token) {
+        await signInWithCustomToken(auth, syncRes.token);
       }
+
+      const syncedUser = syncRes.user ? { ...auth.currentUser, ...syncRes.user } : auth.currentUser;
 
       setLoading(false);
       setCurrentUser(syncedUser);
@@ -115,7 +90,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       showToast('Authentication successful!', 'success');
 
       if (role === 'artisan') {
-        navigateTo('artisan_signup');
+        navigateTo('artisan_dash');
       } else {
         navigateTo('client_dash');
       }
@@ -189,7 +164,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
             </div>
           )}
 
-          <div id="recaptcha-container"></div>
+
 
           {step === 1 ? (
             <form onSubmit={handleSendOtp} className="space-y-[18px]">
@@ -299,7 +274,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         </div>
       </main>
 
-      <div id="recaptcha-container"></div>
+
 
       <footer className="p-4 text-center text-xs text-[#8a8a8a] flex items-center justify-center gap-1.5 relative z-20 mix-blend-multiply">
         <ShieldCheck className="w-4 h-4" />

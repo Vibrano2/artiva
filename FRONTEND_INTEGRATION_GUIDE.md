@@ -181,8 +181,7 @@ sequenceDiagram
     "city": "Lagos",
     "state": "Lagos"
   },
-  "timing": "ASAP",
-  "budget": 20000
+  "urgency": "Today"
 }
 ```
 

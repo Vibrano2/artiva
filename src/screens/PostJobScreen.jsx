@@ -12,7 +12,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [urgency, setUrgency] = useState('Today');
   const [description, setDescription] = useState('');
-  const [budget, setBudget] = useState('5000');
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -35,7 +34,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
         location,
         urgency,
         description,
-        budget: Number(budget),
         photos,
         client_uid: currentUser?.uid || 'user_demo_client'
       });
@@ -142,23 +140,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
                 className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
                 required
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                5. Estimated Budget (₦)
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  placeholder="5000"
-                  className="w-full p-3.5 pl-10 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
-                />
-                <span className="absolute left-3.5 top-3.5 text-sm font-bold text-slate-400">₦</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">Match fee is ₦1,500 held safely in escrow until completion.</p>
             </div>
 
             <button

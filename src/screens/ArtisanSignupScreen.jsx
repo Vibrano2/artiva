@@ -5,6 +5,8 @@ import { ApiService, ALL_TRADES, TARGET_LOCATIONS, TradeServicesMap } from '../s
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Wrench, ShieldCheck, ArrowRight, Upload, Phone, FileText } from 'lucide-react';
 import { VideoOverlay } from '../components/VideoOverlay';
+import { signInWithCustomToken } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 export function ArtisanSignupScreen() {
   const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
@@ -15,6 +17,12 @@ export function ArtisanSignupScreen() {
   const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
   const [lastName, setLastName] = useState(currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '');
   const [phone, setPhone] = useState(currentUser?.phoneNumber || '');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(!!currentUser?.phoneNumber);
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  
+  const [experienceYears, setExperienceYears] = useState('');
   const [trade, setTrade] = useState(ALL_TRADES[0]);
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [tagline, setTagline] = useState('');
@@ -24,6 +32,7 @@ export function ArtisanSignupScreen() {
   const [idPhoto, setIdPhoto] = useState('');
   const [nin, setNin] = useState('');
   const [selectedServices, setSelectedServices] = useState([]);
+  const [ndprConsent, setNdprConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -37,12 +46,54 @@ export function ArtisanSignupScreen() {
     }
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     setError(null);
     if (step === 1) {
       if (!firstName.trim()) return setError('Please provide your first name.');
       if (!lastName.trim()) return setError('Please provide your last name.');
-      if (!phone.trim()) return setError('Please provide your phone number.');
+      if (!experienceYears) return setError('Please provide your years of experience.');
+      if (!phone.trim() || phone.length < 10) return setError('Please provide a valid phone number.');
+      
+      if (!otpVerified) {
+        if (!otpSent) {
+          // Send OTP
+          setLoading(true);
+          try {
+            const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+            await ApiService.sendPhoneOtp(formattedPhone);
+            setOtpSent(true);
+            setLoading(false);
+            showToast(`OTP sent to ${formattedPhone}`, 'success');
+          } catch (err) {
+            console.error(err);
+            setLoading(false);
+            setError(err.message || 'Failed to send OTP');
+          }
+          return;
+        } else {
+          // Verify OTP
+          if (!otp || otp.length < 6) return setError('Please enter the 6-digit OTP.');
+          setLoading(true);
+          try {
+            const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
+            const res = await ApiService.verifyPhoneOtp(formattedPhone, otp, 'artisan');
+            if (res.token) {
+              await signInWithCustomToken(auth, res.token);
+            }
+            setOtpVerified(true);
+            setLoading(false);
+            showToast('Phone number verified!', 'success');
+            // If they just verified, let them proceed if everything else is fine
+            setStep(step + 1);
+            return;
+          } catch (err) {
+            console.error(err);
+            setLoading(false);
+            setError('Invalid OTP code. Please try again.');
+            return;
+          }
+        }
+      }
     }
     if (step === 2 && !tagline) {
       setError('Please provide a short tagline or bio.');
@@ -57,6 +108,10 @@ export function ArtisanSignupScreen() {
       setError('Please provide a valid 11-digit NIN.');
       return;
     }
+    if (!ndprConsent) {
+      setError('You must accept the NDPR Privacy Policy and Terms to proceed.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -67,6 +122,7 @@ export function ArtisanSignupScreen() {
         email: '',
         password: '',
         phone: phone,
+        experience_years: Number(experienceYears),
         trade,
         services: selectedServices,
         location,
@@ -154,15 +210,58 @@ export function ArtisanSignupScreen() {
               </div>
 
               <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Phone Number</label>
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Years of Experience</label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+234 803 000 0000"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={experienceYears}
+                  onChange={(e) => setExperienceYears(e.target.value)}
+                  placeholder="e.g. 5"
                   className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
+                  disabled={otpSent && !otpVerified}
                 />
               </div>
+
+              <div>
+                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Phone Number</label>
+                <div className="flex items-center rounded-[10px] border-[1.5px] border-[#e0e0e0] bg-[#fafafa] focus-within:border-[#16858F] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#16858F]/25 overflow-hidden transition-all">
+                  <span className="px-3 py-[13px] text-[#444] font-semibold text-[15px] border-r border-[#e0e0e0] flex items-center gap-1.5 bg-gray-50/50">
+                    <span className="text-base">🇳🇬</span> +234
+                  </span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                    placeholder="803 123 4567"
+                    className="w-full p-[13px_14px] text-[15px] text-[#222] outline-none bg-transparent"
+                    maxLength={10}
+                    disabled={otpVerified || otpSent}
+                  />
+                </div>
+              </div>
+
+              {otpSent && !otpVerified && (
+                <div className="animate-fade-in">
+                  <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Enter 6-Digit OTP</label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="• • • • • •"
+                    className="w-full p-[13px_14px] text-[15px] tracking-[0.4em] text-center font-bold text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
+                    maxLength={6}
+                    autoFocus
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => { setOtpSent(false); setOtp(''); }}
+                    className="text-[12px] font-bold text-[#16858F] mt-2 text-center w-full hover:underline"
+                  >
+                    Change Phone Number
+                  </button>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Primary Estate</label>
@@ -180,10 +279,17 @@ export function ArtisanSignupScreen() {
               <button
                 type="button"
                 onClick={handleNextStep}
-                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)]"
+                disabled={loading}
+                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)] disabled:opacity-50"
               >
-                <span>Continue</span>
-                <ArrowRight className="w-4 h-4" />
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>{(!otpVerified && !otpSent) ? 'Send OTP & Continue' : (!otpVerified ? 'Verify OTP & Continue' : 'Continue')}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -317,6 +423,25 @@ export function ArtisanSignupScreen() {
                 </div>
               </div>
 
+              <div 
+                onClick={() => setNdprConsent(!ndprConsent)}
+                className="flex items-start gap-3 cursor-pointer select-none p-3 rounded-xl hover:bg-white/30 transition-colors text-left border border-transparent hover:border-[#e0e0e0]"
+              >
+                <div className="flex items-center justify-center h-5 mt-0.5">
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${ndprConsent ? 'bg-[#16858F] border-[#16858F]' : 'bg-[#fafafa] border-[#e0e0e0]'}`}>
+                    {ndprConsent && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-bold text-[#444] leading-tight">
+                    NDPR Consent & Terms
+                  </p>
+                  <p className="text-[12px] text-[#6b6b6b] leading-tight mt-1">
+                    I agree to Artiva's Terms and Privacy Policy. I consent to the processing of my NIN and ID for verification.
+                  </p>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
@@ -345,6 +470,7 @@ export function ArtisanSignupScreen() {
 
         </div>
       </main>
+
     </div>
   );
 }
