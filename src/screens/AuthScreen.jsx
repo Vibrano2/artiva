@@ -4,10 +4,20 @@ import { ArtivaLogo } from '../components/ArtivaLogo';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { Mail, ShieldCheck, ArrowRight, Check, RefreshCw, KeyRound, Phone } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { VideoOverlay } from '../components/VideoOverlay';
-import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { 
+  signInWithPhoneNumber, 
+  GoogleAuthProvider, 
+  OAuthProvider, 
+  signInWithPopup 
+} from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { 
+  formatNigerianPhoneNumber, 
+  getOrCreateRecaptchaVerifier, 
+  formatAuthError 
+} from '../utils/authUtils';
 
 export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const { navigateTo, setCurrentUser, setUserRole, showToast } = useApp();
@@ -22,53 +32,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [timer, setTimer] = useState(30);
   const [cardVisible, setCardVisible] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
-
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
-    if (!phone || phone.length < 10) {
-      setError('Please enter a valid phone number.');
-      return;
-    }
-    if (!ndprConsent) {
-      setError('You must accept the Terms and Privacy Policy to proceed.');
-      return;
-    }
-    if (!phone || phone.length < 10) {
-      setError('Please enter a valid phone number.');
-      return;
-    }
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-      
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible'
-        });
-      }
-      
-      const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-      setConfirmationResult(confirmation);
-      
-      setLoading(false);
-      setStep(2);
-      showToast(`OTP sent to ${formattedPhone}`, 'success');
-      startTimer();
-    } catch (err) {
-      console.error('Firebase OTP Error:', err);
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(function(widgetId) {
-          window.grecaptcha.reset(widgetId);
-        }).catch(() => {});
-      }
-      setLoading(false);
-      setError(`${err.code || 'Error'}: ${err.message}`);
-    }
-  };
+  const [activeFormattedPhone, setActiveFormattedPhone] = useState('');
 
   const startTimer = () => {
     setTimer(30);
@@ -83,20 +47,150 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     }, 1000);
   };
 
+  /**
+   * Handle Google Sign-In with popup
+   */
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      provider.setCustomParameters({ prompt: 'select_account' });
+
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const token = await user.getIdToken();
+
+      const syncRes = await ApiService.verifyFirebaseToken(token, role);
+      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+
+      setLoading(false);
+      setCurrentUser(syncedUser);
+      setUserRole(role);
+      showToast('Signed in with Google successfully!', 'success');
+
+      if (role === 'artisan') {
+        navigateTo('artisan_dash');
+      } else {
+        navigateTo('client_dash');
+      }
+    } catch (err) {
+      setLoading(false);
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
+    }
+  };
+
+  /**
+   * Handle Apple Sign-In with popup
+   */
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const token = await user.getIdToken();
+
+      const syncRes = await ApiService.verifyFirebaseToken(token, role);
+      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+
+      setLoading(false);
+      setCurrentUser(syncedUser);
+      setUserRole(role);
+      showToast('Signed in with Apple successfully!', 'success');
+
+      if (role === 'artisan') {
+        navigateTo('artisan_dash');
+      } else {
+        navigateTo('client_dash');
+      }
+    } catch (err) {
+      setLoading(false);
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
+    }
+  };
+
+  /**
+   * Handle Send OTP for Nigerian phone number
+   */
+  const handleSendOtp = async (e) => {
+    if (e) e.preventDefault();
+    setError(null);
+
+    const { formatted, isValid } = formatNigerianPhoneNumber(phone);
+    if (!isValid) {
+      setError('Please enter a valid 10 or 11-digit Nigerian phone number (e.g. 0803 123 4567).');
+      return;
+    }
+    if (!ndprConsent) {
+      setError('You must accept the Terms and Privacy Policy to proceed.');
+      return;
+    }
+
+    setLoading(true);
+    setActiveFormattedPhone(formatted);
+
+    try {
+      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
+        setError('Security check expired. Please try sending OTP again.');
+      });
+
+      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
+      setConfirmationResult(confirmation);
+
+      setLoading(false);
+      setStep(2);
+      showToast(`OTP sent to ${formatted}`, 'success');
+      startTimer();
+    } catch (err) {
+      console.warn('[FirebaseAuth] Primary phone auth failed, attempting fallback:', err);
+
+      try {
+        await ApiService.sendPhoneOtp(formatted);
+        setConfirmationResult(null);
+        setLoading(false);
+        setStep(2);
+        showToast(`OTP sent to ${formatted}`, 'success');
+        startTimer();
+      } catch (backendErr) {
+        setLoading(false);
+        const friendlyMsg = formatAuthError(err || backendErr);
+        setError(friendlyMsg);
+      }
+    }
+  };
+
+  /**
+   * Handle Verify OTP
+   */
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     if (!otp || otp.length < 6) {
       setError('Please enter the 6-digit verification code.');
       return;
     }
+    setError(null);
+    setLoading(true);
+
     try {
-      const result = await confirmationResult.confirm(otp);
-      const user = result.user;
-      const token = await user.getIdToken();
-      
-      const syncRes = await ApiService.verifyFirebaseToken(token, role);
-      
-      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      let syncedUser;
+      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
+        const result = await confirmationResult.confirm(otp);
+        const user = result.user;
+        const token = await user.getIdToken();
+        const syncRes = await ApiService.verifyFirebaseToken(token, role);
+        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      } else {
+        syncedUser = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
+      }
 
       setLoading(false);
       setCurrentUser(syncedUser);
@@ -110,7 +204,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       }
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Invalid OTP');
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
     }
   };
 
@@ -126,7 +221,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         <OfflineBanner onRetry={step === 1 ? handleSendOtp : handleVerifyOtp} />
       </div>
 
-      <div id="recaptcha-container"></div>
+      {/* Persistent Invisible reCAPTCHA Container */}
+      <div id="recaptcha-container" className="fixed bottom-0 left-0 z-50"></div>
 
       <main className="max-w-md mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center relative z-20">
         <div 
@@ -181,16 +277,18 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
             <div className="flex gap-3 mb-6">
               <button 
                 type="button"
-                onClick={() => showToast('Apple login coming soon (MVP currently supports Phone Auth only)', 'info')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1f1f1f] hover:bg-black text-white text-[13px] font-bold rounded-xl transition-all shadow-sm"
+                onClick={handleAppleSignIn}
+                disabled={loading}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1f1f1f] hover:bg-black text-white text-[13px] font-bold rounded-xl transition-all shadow-sm disabled:opacity-50"
               >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V15.39h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 3.39h-2.33v6.488C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z" display="none"/><path d="M16.636 12.008c0-3.033 2.47-4.49 2.584-4.568-1.423-2.083-3.626-2.368-4.407-2.4-1.879-.191-3.676 1.106-4.636 1.106-.962 0-2.441-1.077-3.987-1.047-2.016.03-3.882 1.171-4.918 2.975-2.093 3.625-.536 8.988 1.503 11.936 1.004 1.442 2.183 3.06 3.743 3.003 1.498-.059 2.062-.969 3.864-.969 1.796 0 2.308.97 3.867.94 1.603-.027 2.61-1.465 3.593-2.923 1.144-1.677 1.614-3.3 1.637-3.385-.035-.015-3.178-1.218-3.178-4.664M11.979 4.398c.816-1.004 1.365-2.404 1.215-3.805-1.205.048-2.673.811-3.518 1.815-.758.88-1.421 2.3-1.245 3.68 1.346.104 2.73-.708 3.548-1.69" /></svg>
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M16.636 12.008c0-3.033 2.47-4.49 2.584-4.568-1.423-2.083-3.626-2.368-4.407-2.4-1.879-.191-3.676 1.106-4.636 1.106-.962 0-2.441-1.077-3.987-1.047-2.016.03-3.882 1.171-4.918 2.975-2.093 3.625-.536 8.988 1.503 11.936 1.004 1.442 2.183 3.06 3.743 3.003 1.498-.059 2.062-.969 3.864-.969 1.796 0 2.308.97 3.867.94 1.603-.027 2.61-1.465 3.593-2.923 1.144-1.677 1.614-3.3 1.637-3.385-.035-.015-3.178-1.218-3.178-4.664M11.979 4.398c.816-1.004 1.365-2.404 1.215-3.805-1.205.048-2.673.811-3.518 1.815-.758.88-1.421 2.3-1.245 3.68 1.346.104 2.73-.708 3.548-1.69" /></svg>
                 Apple
               </button>
               <button 
                 type="button"
-                onClick={() => showToast('Google login coming soon (MVP currently supports Phone Auth only)', 'info')}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 text-[#1f1f1f] text-[13px] font-bold rounded-xl transition-all shadow-sm border border-[#e0e0e0]"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 text-[#1f1f1f] text-[13px] font-bold rounded-xl transition-all shadow-sm border border-[#e0e0e0] disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                 Google
@@ -199,12 +297,10 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
           )}
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50/80 border border-red-200 text-red-800 text-xs font-semibold rounded-xl flex items-center gap-2 animate-pulse text-left">
+            <div className="mb-4 p-3.5 bg-red-50/90 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left shadow-sm">
               <span>{error}</span>
             </div>
           )}
-
-
 
           {step === 1 ? (
             <form onSubmit={handleSendOtp} className="space-y-[18px]">
@@ -222,7 +318,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="803 123 4567"
                     className="w-full p-[13px_14px] text-[15px] text-[#222] outline-none bg-transparent"
-                    maxLength={10}
+                    maxLength={11}
                     autoFocus
                   />
                 </div>
@@ -313,8 +409,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
           )}
         </div>
       </main>
-
-
 
       <footer className="p-4 text-center text-xs text-[#8a8a8a] flex items-center justify-center gap-1.5 relative z-20 mix-blend-multiply">
         <ShieldCheck className="w-4 h-4" />

@@ -16,15 +16,6 @@ export * from './chatService';
 export * from './proformaService';
 export * from './constants';
 
-export const ALL_TRADES = [
-  'Plumber', 'Electrician', 'Carpenter', 'AC Technician',
-  'Painter', 'Mason', 'Welder', 'Cleaner', 'Generator Mechanic'
-];
-
-export const TARGET_LOCATIONS = [
-  'Life Camp (Abuja)'
-];
-
 export const ApiService = {
   ...AuthService,
   ...ArtisanService,
@@ -36,3 +27,4 @@ export const ApiService = {
   init: () => {},
 };
 
+export default ApiService;

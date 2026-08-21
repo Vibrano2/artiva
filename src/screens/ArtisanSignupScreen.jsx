@@ -6,8 +6,13 @@ import { ApiService, ALL_TRADES, TARGET_LOCATIONS, TradeServicesMap } from '../s
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Wrench, ShieldCheck, ArrowRight, Upload, Phone, FileText, RefreshCw, KeyRound } from 'lucide-react';
 import { VideoOverlay } from '../components/VideoOverlay';
-import { signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
+import { signInWithPhoneNumber } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { 
+  formatNigerianPhoneNumber, 
+  getOrCreateRecaptchaVerifier, 
+  formatAuthError 
+} from '../utils/authUtils';
 
 export function ArtisanSignupScreen() {
   const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
@@ -65,34 +70,39 @@ export function ArtisanSignupScreen() {
       if (!firstName.trim()) return setError('Please provide your first name.');
       if (!lastName.trim()) return setError('Please provide your last name.');
       if (!experienceYears) return setError('Please provide your years of experience.');
-      if (!phone.trim() || phone.length < 10) return setError('Please provide a valid phone number.');
+      
+      const { formatted, isValid } = formatNigerianPhoneNumber(phone);
+      if (!isValid) {
+        return setError('Please provide a valid 10 or 11-digit Nigerian phone number (e.g. 0803 123 4567).');
+      }
       
       setLoading(true);
       try {
-        const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-        if (!window.recaptchaVerifier) {
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible'
-          });
-        }
+        const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
+          setError('Security check expired. Please retry.');
+        });
         
-        const appVerifier = window.recaptchaVerifier;
-        const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+        const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
         setConfirmationResult(confirmation);
         
         setLoading(false);
         setStep(2);
-        showToast(`OTP sent to ${formattedPhone}`, 'success');
+        showToast(`OTP sent to ${formatted}`, 'success');
         startTimer();
       } catch (err) {
-        console.error('Firebase OTP Error:', err);
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.render().then(function(widgetId) {
-            window.grecaptcha.reset(widgetId);
-          }).catch(() => {});
+        console.warn('[Artisan Phone Auth] Primary attempt failed, falling back to backend OTP:', err);
+        try {
+          await ApiService.sendPhoneOtp(formatted);
+          setConfirmationResult(null);
+          setLoading(false);
+          setStep(2);
+          showToast(`OTP sent to ${formatted}`, 'success');
+          startTimer();
+        } catch (backendErr) {
+          setLoading(false);
+          const friendlyMsg = formatAuthError(err || backendErr);
+          setError(friendlyMsg);
         }
-        setLoading(false);
-        setError(`${err.code || 'Error'}: ${err.message}`);
       }
       return;
     }
@@ -110,22 +120,29 @@ export function ArtisanSignupScreen() {
       return;
     }
     setLoading(true);
-    try {
-      const result = await confirmationResult.confirm(otp);
-      const user = result.user;
-      const token = await user.getIdToken();
+    setError(null);
+    const { formatted } = formatNigerianPhoneNumber(phone);
 
-      const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
-      
-      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+    try {
+      let syncedUser;
+      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
+        const result = await confirmationResult.confirm(otp);
+        const user = result.user;
+        const token = await user.getIdToken();
+        const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
+        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      } else {
+        syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
+      }
+
       setCurrentUser(syncedUser);
-      
       setLoading(false);
       showToast('Phone verified successfully!', 'success');
       setStep(3); // Proceed to Trade & Bio
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Invalid OTP');
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
     }
   };
 
@@ -133,28 +150,29 @@ export function ArtisanSignupScreen() {
     if (timer > 0) return;
     setError(null);
     setLoading(true);
+    const { formatted } = formatNigerianPhoneNumber(phone);
+
     try {
-      const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible'
-        });
-      }
-      
-      const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container');
+      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
       setConfirmationResult(confirmation);
+      
       setLoading(false);
-      showToast(`OTP resent to ${formattedPhone}`, 'success');
+      showToast(`New OTP sent to ${formatted}`, 'success');
       startTimer();
     } catch (err) {
-      if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(function(widgetId) {
-          window.grecaptcha.reset(widgetId);
-        }).catch(() => {});
+      console.warn('[Artisan Phone Auth] Resend failed, falling back to backend OTP:', err);
+      try {
+        await ApiService.sendPhoneOtp(formatted);
+        setConfirmationResult(null);
+        setLoading(false);
+        showToast(`New OTP sent to ${formatted}`, 'success');
+        startTimer();
+      } catch (backendErr) {
+        setLoading(false);
+        const friendlyMsg = formatAuthError(err || backendErr);
+        setError(friendlyMsg);
       }
-      setLoading(false);
-      setError(`${err.code || 'Error'}: ${err.message}`);
     }
   };
 
