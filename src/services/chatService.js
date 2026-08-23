@@ -1,111 +1,77 @@
-import { fetchWithAuth } from './apiConfig';
-import { db } from '../config/firebase';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  setDoc, 
-  serverTimestamp 
-} from 'firebase/firestore';
+import { mockDb } from '../data/mockDatabase';
 
 export const ChatService = {
   /**
-   * Real-time Firestore listener for bi-directional chat messages
-   * @param {string} jobId 
+   * Real-time client-side listener for bi-directional chat messages
+   * @param {string} jobIdOrMatchId 
    * @param {Function} callback 
    * @returns {Function} Unsubscribe function
    */
-  subscribeToChat(jobId, callback) {
-    if (!db || !jobId) return () => {};
-    try {
-      const messagesRef = collection(db, 'jobs', String(jobId), 'messages');
-      const q = query(messagesRef, orderBy('created_at', 'asc'));
-      return onSnapshot(
-        q, 
-        (snapshot) => {
-          const messages = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          callback(messages);
-        },
-        (error) => {
-          console.warn('Firestore chat listener fallback:', error);
-          this.getChatMessages(jobId).then(callback).catch(() => {});
-        }
-      );
-    } catch (err) {
-      console.warn('Error initiating chat listener:', err);
-      return () => {};
-    }
+  subscribeToChat(jobIdOrMatchId, callback) {
+    const key = String(jobIdOrMatchId || 'default');
+    return mockDb.subscribeChat(key, callback);
   },
 
   /**
-   * Fetch chat message history via REST API fallback
+   * Fetch chat message history locally
    */
-  async getChatMessages(jobId) {
-    const res = await fetchWithAuth(`/api/chat/job/${jobId}?limit=50`, { method: 'GET' });
-    return res.data || (Array.isArray(res) ? res : []);
+  async getChatMessages(jobIdOrMatchId) {
+    const key = String(jobIdOrMatchId || 'default');
+    return mockDb.getMessages(key);
   },
 
   /**
-   * Send a chat message via REST API
+   * Send a chat message locally
    */
-  async sendChatMessage(jobId, content) {
-    return await fetchWithAuth(`/api/chat/job/${jobId}`, {
-      method: 'POST',
-      body: JSON.stringify({ content })
-    });
+  async sendChatMessage(jobIdOrMatchId, content, senderUid) {
+    const key = String(jobIdOrMatchId || 'default');
+    return mockDb.addMessage(key, content, senderUid);
   },
 
   /**
-   * Real-time Firestore listener for live artisan GPS tracking
+   * Real-time listener for live artisan GPS tracking simulation
    * @param {string} jobId 
    * @param {Function} callback - Receives { lat, lng, heading, status }
    * @returns {Function} Unsubscribe function
    */
   subscribeToTracking(jobId, callback) {
-    if (!db || !jobId) return () => {};
-    try {
-      const trackingDocRef = doc(db, 'jobs', String(jobId), 'tracking');
-      return onSnapshot(
-        trackingDocRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            callback({
-              lat: data.latitude || data.lat,
-              lng: data.longitude || data.lng,
-              heading: data.heading || 0,
-              status: data.status || 'en_route',
-              updated_at: data.updated_at
-            });
-          }
-        },
-        (error) => {
-          console.warn('Firestore tracking listener error:', error);
-        }
-      );
-    } catch (err) {
-      console.warn('Error setting tracking listener:', err);
-      return () => {};
-    }
+    const clientLocation = [9.0632, 7.4233];
+    let current = [9.0550, 7.4100];
+    let heading = 45;
+
+    const interval = setInterval(() => {
+      const [lat, lng] = current;
+      const [targetLat, targetLng] = clientLocation;
+      const latDiff = targetLat - lat;
+      const lngDiff = targetLng - lng;
+
+      if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
+        callback({
+          lat: targetLat,
+          lng: targetLng,
+          heading: 0,
+          status: 'arrived'
+        });
+        clearInterval(interval);
+        return;
+      }
+
+      current = [lat + (latDiff * 0.1), lng + (lngDiff * 0.1)];
+      callback({
+        lat: current[0],
+        lng: current[1],
+        heading,
+        status: 'en_route'
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
   },
 
   /**
-   * Artisan streams GPS coordinates to Firestore tracking doc
+   * Stream artisan GPS location locally
    */
   async streamGpsLocation(jobId, { latitude, longitude, heading = 0, status = 'en_route' }) {
-    if (!db || !jobId) return;
-    const trackingDocRef = doc(db, 'jobs', String(jobId), 'tracking');
-    await setDoc(trackingDocRef, {
-      latitude,
-      longitude,
-      heading,
-      status,
-      updated_at: serverTimestamp()
-    }, { merge: true });
+    return { success: true };
   }
 };

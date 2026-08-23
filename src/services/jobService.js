@@ -1,44 +1,29 @@
-import { fetchWithAuth } from './apiConfig';
+import { mockDb } from '../data/mockDatabase';
+import { ArtisanService } from './artisanService';
 
 export const JobService = {
   /**
-   * Client posts a new job request
+   * Client posts a new job request locally
    */
   async postJob(jobData) {
-    const { trade, location, urgency, timing, description, budget, photos } = jobData;
-    const locObj = typeof location === 'object' ? location : {
-      address: location || 'Life Camp, Abuja',
-      city: 'Abuja',
-      state: 'FCT'
-    };
+    const { trade, location, urgency, timing, description, budget, photos, client_uid } = jobData;
+    const locAddress = typeof location === 'object' ? (location.address || 'Life Camp, Abuja') : (location || 'Life Camp, Abuja');
 
-    const payload = {
-      trade,
-      description,
-      location: locObj,
+    const newJob = mockDb.createJob({
+      trade: trade || 'Plumbing',
+      description: description || 'Repairs required',
+      location: locAddress,
       timing: timing || urgency || 'Today',
+      urgency: timing || urgency || 'Today',
       budget: budget ? Number(budget) : 15000,
-      photos: photos || []
-    };
-
-    const res = await fetchWithAuth('/api/jobs', {
-      method: 'POST',
-      body: JSON.stringify(payload)
+      photos: photos || [],
+      client_id: client_uid || 'client_demo_01'
     });
 
-    const jobResult = res.data || res.job || res;
-    const jobId = jobResult.id || jobResult.jobId || jobResult.job_id || res.jobId;
     return {
-      jobId,
-      job: {
-        ...jobResult,
-        id: jobId,
-        job_id: jobId,
-        trade,
-        description,
-        location: locObj.address,
-        urgency: timing || urgency || 'Today'
-      }
+      jobId: newJob.job_id,
+      id: newJob.job_id,
+      job: newJob
     };
   },
 
@@ -46,73 +31,48 @@ export const JobService = {
    * Fetch all jobs (with optional filters)
    */
   async getJobs(filters = {}) {
-    const query = new URLSearchParams();
-    if (filters.status) query.append('status', filters.status);
-    if (filters.trade) query.append('trade', filters.trade);
-    const queryString = query.toString() ? `?${query.toString()}` : '';
-    
-    const res = await fetchWithAuth(`/api/jobs${queryString}`);
-    return res.data || (Array.isArray(res) ? res : []);
+    return mockDb.getJobs(filters);
   },
 
   /**
    * Fetch single job by ID
    */
   async getJobById(id) {
-    const res = await fetchWithAuth(`/api/jobs/${id}`);
-    return res.data || res;
+    return mockDb.getJobById(id);
   },
 
   /**
    * Auto-matches a client's job request with artisans
    */
   async triggerMatching(jobId) {
-    try {
-      return await fetchWithAuth('/api/artisans/match', {
-        method: 'POST',
-        body: JSON.stringify({ job_id: jobId })
-      });
-    } catch {
-      return await fetchWithAuth(`/api/jobs/${jobId}/match`, { method: 'POST' });
-    }
+    return ArtisanService.matchArtisans(jobId);
   },
 
   /**
    * Get matched artisans for a job
    */
   async getJobMatches(jobId) {
-    try {
-      const res = await fetchWithAuth(`/api/jobs/${jobId}/matches`);
-      return res.data?.matches || res.data || (Array.isArray(res) ? res : []);
-    } catch {
-      const res = await fetchWithAuth('/api/artisans/match', {
-        method: 'POST',
-        body: JSON.stringify({ job_id: jobId })
-      });
-      return res.data?.matches || res.data || (Array.isArray(res) ? res : []);
-    }
+    const matchRes = await ArtisanService.matchArtisans(jobId);
+    return matchRes.data?.matches?.map(m => m.artisan) || mockDb.getArtisans();
   },
 
   /**
    * Client selects and accepts a matched artisan
    */
   async selectArtisan(jobId, artisanId) {
-    const res = await fetchWithAuth(`/api/jobs/${jobId}/select-artisan`, {
-      method: 'POST',
-      body: JSON.stringify({ artisan_id: artisanId })
+    const updated = mockDb.updateJob(jobId, {
+      artisan_id: artisanId,
+      status: 'matched',
+      match_id: `match_${jobId}_${artisanId}`
     });
-    return res.data || res;
+    return updated || { success: true };
   },
 
   /**
    * Update job lifecycle status
    */
   async updateJobStatus(jobId, status) {
-    const res = await fetchWithAuth(`/api/jobs/${jobId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status })
-    });
-    return res.data || res;
+    return mockDb.updateJob(jobId, { status });
   },
 
   /**
@@ -120,74 +80,52 @@ export const JobService = {
    */
   async submitProforma(jobId, proformaData) {
     const payload = {
-      supplier_name: proformaData.supplier_name || 'Direct Materials',
+      job_id: jobId,
+      supplier_name: proformaData.supplier_name || 'Life Camp Hardware Store',
       materials_cost: Number(proformaData.materials_cost) || 0,
       labor_cost: Number(proformaData.labor_cost) || 0,
-      total_amount: Number(proformaData.total_amount) || (Number(proformaData.materials_cost || 0) + Number(proformaData.labor_cost || 0)),
+      total_amount: Number(proformaData.total_amount) || 25000,
       items: proformaData.items || [],
-      receipt_url: proformaData.receipt_url || ''
+      receipt_url: proformaData.receipt_url || proformaData.invoice_document_url || ''
     };
 
-    let res;
-    try {
-      res = await fetchWithAuth(`/api/jobs/${jobId}/proforma`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch {
-      res = await fetchWithAuth('/api/proforma', {
-        method: 'POST',
-        body: JSON.stringify({ job_id: jobId, ...payload })
-      });
-    }
-    return res.data || res;
+    return mockDb.createProforma(payload);
   },
 
   /**
    * Start live GPS tracking (artisan en route)
    */
   async startTracking(jobId) {
-    return await fetchWithAuth(`/api/jobs/${jobId}/tracking/start`, {
-      method: 'POST'
-    });
+    mockDb.updateJob(jobId, { status: 'in_progress', tracking_status: 'en_route' });
+    return { success: true, status: 'en_route' };
   },
 
   /**
    * Artisan arrival notification
    */
   async arriveTracking(jobId) {
-    return await fetchWithAuth(`/api/jobs/${jobId}/tracking/arrive`, {
-      method: 'POST'
-    });
+    mockDb.updateJob(jobId, { tracking_status: 'arrived' });
+    return { success: true, status: 'arrived' };
   },
 
   /**
    * Submit star rating & review for completed job
    */
   async submitReview(jobId, { match_id, rating = 5, review = '' }) {
-    const payload = {
-      match_id: match_id || `match_${jobId}`,
+    mockDb.updateJob(jobId, {
+      status: 'completed',
       rating: Number(rating),
       review: review || 'Job completed successfully.'
-    };
+    });
 
-    let res;
-    try {
-      res = await fetchWithAuth(`/api/jobs/${jobId}/reviews`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch {
-      res = await fetchWithAuth(`/api/jobs/${jobId}/complete`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    }
-    return res.data || res;
+    return {
+      success: true,
+      message: 'Job completed and rating submitted successfully.'
+    };
   },
 
   /**
-   * Complete job (alias for submitReview)
+   * Complete job
    */
   async completeJob(jobId, details = {}) {
     const payload = typeof details === 'object' 

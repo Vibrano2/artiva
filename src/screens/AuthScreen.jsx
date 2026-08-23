@@ -30,7 +30,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [timer, setTimer] = useState(30);
-  const [cardVisible, setCardVisible] = useState(false);
+  const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [activeFormattedPhone, setActiveFormattedPhone] = useState('');
 
@@ -48,26 +48,17 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   };
 
   /**
-   * Handle Google Sign-In with popup
+   * Handle Google Sign-In
    */
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
-      provider.setCustomParameters({ prompt: 'select_account' });
-
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const token = await user.getIdToken();
-
-      const syncRes = await ApiService.verifyFirebaseToken(token, role);
-      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      const syncRes = await ApiService.login('mock_google_token', role);
+      const user = syncRes.user;
 
       setLoading(false);
-      setCurrentUser(syncedUser);
+      setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Google successfully!', 'success');
 
@@ -84,25 +75,17 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   };
 
   /**
-   * Handle Apple Sign-In with popup
+   * Handle Apple Sign-In
    */
   const handleAppleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      const provider = new OAuthProvider('apple.com');
-      provider.addScope('email');
-      provider.addScope('name');
-
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const token = await user.getIdToken();
-
-      const syncRes = await ApiService.verifyFirebaseToken(token, role);
-      const syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      const syncRes = await ApiService.login('mock_apple_token', role);
+      const user = syncRes.user;
 
       setLoading(false);
-      setCurrentUser(syncedUser);
+      setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Apple successfully!', 'success');
 
@@ -139,32 +122,16 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     setActiveFormattedPhone(formatted);
 
     try {
-      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
-        setError('Security check expired. Please try sending OTP again.');
-      });
-
-      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
-      setConfirmationResult(confirmation);
-
+      await ApiService.sendPhoneOtp(formatted);
+      setConfirmationResult(null);
       setLoading(false);
       setStep(2);
-      showToast(`OTP sent to ${formatted}`, 'success');
+      showToast(`OTP sent to ${formatted} (Use 123456 or any 6 digits)`, 'success');
       startTimer();
     } catch (err) {
-      console.warn('[FirebaseAuth] Primary phone auth failed, attempting fallback:', err);
-
-      try {
-        await ApiService.sendPhoneOtp(formatted);
-        setConfirmationResult(null);
-        setLoading(false);
-        setStep(2);
-        showToast(`OTP sent to ${formatted}`, 'success');
-        startTimer();
-      } catch (backendErr) {
-        setLoading(false);
-        const friendlyMsg = formatAuthError(err || backendErr);
-        setError(friendlyMsg);
-      }
+      setLoading(false);
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
     }
   };
 

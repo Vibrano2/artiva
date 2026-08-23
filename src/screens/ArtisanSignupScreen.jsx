@@ -18,7 +18,7 @@ export function ArtisanSignupScreen() {
   const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
 
   const [step, setStep] = useState(1);
-  const [cardVisible, setCardVisible] = useState(false);
+  const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   
   const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
@@ -78,31 +78,16 @@ export function ArtisanSignupScreen() {
       
       setLoading(true);
       try {
-        const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
-          setError('Security check expired. Please retry.');
-        });
-        
-        const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
-        setConfirmationResult(confirmation);
-        
+        await ApiService.sendPhoneOtp(formatted);
+        setConfirmationResult(null);
         setLoading(false);
         setStep(2);
-        showToast(`OTP sent to ${formatted}`, 'success');
+        showToast(`OTP sent to ${formatted} (Use 123456 or any 6 digits)`, 'success');
         startTimer();
-      } catch (err) {
-        console.warn('[Artisan Phone Auth] Primary attempt failed, falling back to backend OTP:', err);
-        try {
-          await ApiService.sendPhoneOtp(formatted);
-          setConfirmationResult(null);
-          setLoading(false);
-          setStep(2);
-          showToast(`OTP sent to ${formatted}`, 'success');
-          startTimer();
-        } catch (backendErr) {
-          setLoading(false);
-          const friendlyMsg = formatAuthError(err || backendErr);
-          setError(friendlyMsg);
-        }
+      } catch (backendErr) {
+        setLoading(false);
+        const friendlyMsg = formatAuthError(backendErr);
+        setError(friendlyMsg);
       }
       return;
     }
@@ -124,17 +109,7 @@ export function ArtisanSignupScreen() {
     const { formatted } = formatNigerianPhoneNumber(phone);
 
     try {
-      let syncedUser;
-      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
-        const result = await confirmationResult.confirm(otp);
-        const user = result.user;
-        const token = await user.getIdToken();
-        const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
-        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
-      } else {
-        syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
-      }
-
+      const syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
       setCurrentUser(syncedUser);
       setLoading(false);
       showToast('Phone verified successfully!', 'success');
@@ -153,26 +128,15 @@ export function ArtisanSignupScreen() {
     const { formatted } = formatNigerianPhoneNumber(phone);
 
     try {
-      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container');
-      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
-      setConfirmationResult(confirmation);
-      
+      await ApiService.sendPhoneOtp(formatted);
+      setConfirmationResult(null);
       setLoading(false);
       showToast(`New OTP sent to ${formatted}`, 'success');
       startTimer();
-    } catch (err) {
-      console.warn('[Artisan Phone Auth] Resend failed, falling back to backend OTP:', err);
-      try {
-        await ApiService.sendPhoneOtp(formatted);
-        setConfirmationResult(null);
-        setLoading(false);
-        showToast(`New OTP sent to ${formatted}`, 'success');
-        startTimer();
-      } catch (backendErr) {
-        setLoading(false);
-        const friendlyMsg = formatAuthError(err || backendErr);
-        setError(friendlyMsg);
-      }
+    } catch (backendErr) {
+      setLoading(false);
+      const friendlyMsg = formatAuthError(backendErr);
+      setError(friendlyMsg);
     }
   };
 

@@ -1,30 +1,47 @@
-import { fetchWithAuth } from './apiConfig';
+import { mockDb } from '../data/mockDatabase';
 
 export const AdminService = {
   /**
-   * Fetch aggregate dashboard metrics (total users, active jobs, revenue)
+   * Generic request helper for backward compatibility
+   */
+  async request(endpoint, options = {}) {
+    if (endpoint.includes('proforma-queue')) {
+      return { data: { queue: this.getAdminProformaQueue() } };
+    }
+    if (endpoint.includes('/approve')) {
+      const match = endpoint.match(/proforma\/([^/]+)\/approve/);
+      if (match) return this.approveProforma(match[1]);
+    }
+    if (endpoint.includes('/reject')) {
+      const match = endpoint.match(/proforma\/([^/]+)\/reject/);
+      if (match) return this.rejectProforma(match[1]);
+    }
+    return { success: true, data: {} };
+  },
+
+  /**
+   * Fetch aggregate dashboard metrics
    */
   async getAdminStats() {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/admin/stats');
-    } catch {
-      res = await fetchWithAuth('/api/admin/analytics');
-    }
-    return res.data || res;
+    const artisans = mockDb.getArtisans();
+    const jobs = mockDb.getJobs();
+    return {
+      success: true,
+      data: {
+        total_artisans: artisans.length,
+        active_jobs: jobs.filter(j => j.status !== 'completed').length,
+        completed_jobs: jobs.filter(j => j.status === 'completed').length,
+        total_escrow_held: 125000,
+        revenue: 45000
+      }
+    };
   },
 
   /**
    * List newly registered artisans awaiting background check / verification
    */
   async getArtisanVerificationQueue() {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/admin/queue/artisans');
-    } catch {
-      res = await fetchWithAuth('/api/admin/verification-queue');
-    }
-    return res.data || (Array.isArray(res) ? res : []);
+    return mockDb.getAdminQueue();
   },
 
   /**
@@ -38,33 +55,7 @@ export const AdminService = {
    * Approve an artisan's application and grant verification badge
    */
   async verifyArtisan(uid, verified = true, reason = '') {
-    if (verified) {
-      let res;
-      try {
-        res = await fetchWithAuth(`/api/admin/verify/artisan/${uid}`, {
-          method: 'PUT'
-        });
-      } catch {
-        res = await fetchWithAuth(`/api/admin/verify/${uid}`, {
-          method: 'POST'
-        });
-      }
-      return res.data || res;
-    } else {
-      let res;
-      try {
-        res = await fetchWithAuth(`/api/admin/reject/${uid}`, {
-          method: 'POST',
-          body: JSON.stringify({ reason })
-        });
-      } catch {
-        res = await fetchWithAuth(`/api/admin/reject/artisan/${uid}`, {
-          method: 'POST',
-          body: JSON.stringify({ reason })
-        });
-      }
-      return res.data || res;
-    }
+    return mockDb.verifyArtisanInQueue(uid, verified, reason);
   },
 
   /**
@@ -78,68 +69,63 @@ export const AdminService = {
    * Proforma quotes awaiting price / materials approval
    */
   async getAdminProformaQueue() {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/admin/queue/proformas');
-    } catch {
-      res = await fetchWithAuth('/api/admin/proforma-queue');
-    }
-    return res.data || (Array.isArray(res) ? res : []);
+    return mockDb.getProformas();
   },
 
   /**
-   * Admin approves quote and disburses material funds from escrow
+   * Admin approves quote
    */
   async approveProforma(id, notes = 'Materials verified') {
-    const res = await fetchWithAuth(`/api/admin/proforma/${id}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({ notes, status: 'approved' })
-    });
-    return res.data || res;
+    const updated = mockDb.updateProformaStatus(id, 'approved', notes);
+    return {
+      success: true,
+      message: 'Proforma approved successfully',
+      data: updated
+    };
   },
   
   /**
    * Admin rejects quote with a reason
    */
   async rejectProforma(id, reason = 'Quote rejected') {
-    const res = await fetchWithAuth(`/api/admin/proforma/${id}/reject`, {
-      method: 'POST',
-      body: JSON.stringify({ reason, status: 'rejected' })
-    });
-    return res.data || res;
+    const updated = mockDb.updateProformaStatus(id, 'rejected', reason);
+    return {
+      success: true,
+      message: 'Proforma rejected',
+      data: updated
+    };
   },
 
   /**
    * Manually add an artisan from the admin panel
    */
   async addArtisan(data) {
-    const res = await fetchWithAuth('/api/admin/artisans', {
-      method: 'POST',
-      body: JSON.stringify(data)
+    const newArtisan = mockDb.saveArtisan({
+      ...data,
+      is_verified: true,
+      verified: true
     });
-    return res.data || res;
+    return {
+      success: true,
+      message: 'Artisan added successfully',
+      data: newArtisan
+    };
   },
 
   /**
    * Resolve an escalated job dispute
    */
   async resolveDispute(disputeId, action = 'refund_client') {
-    const res = await fetchWithAuth(`/api/admin/disputes/${disputeId}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ action })
-    });
-    return res.data || res;
+    return {
+      success: true,
+      message: `Dispute resolved with action: ${action}`
+    };
   },
 
   /**
    * Get flagged items / risk alerts
    */
   async getAdminFlags() {
-    try {
-      const res = await fetchWithAuth('/api/admin/flags');
-      return res.data || (Array.isArray(res) ? res : []);
-    } catch {
-      return [];
-    }
+    return [];
   }
 };

@@ -6,68 +6,34 @@ export function VideoOverlay({ onCardShowTrigger }) {
   const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
+    // Show card immediately without any blocking delay
+    if (onCardShowTrigger) {
+      onCardShowTrigger();
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
     if (!video || !canvas) return;
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const WORK_W = 1280;
-    const WORK_H = 720;
+    const ctx = canvas.getContext('2d');
+    const WORK_W = 640;
+    const WORK_H = 360;
     
-    const KEY_R = 120, KEY_G = 254, KEY_B = 155;
-    const THRESHOLD = 45;
-    const SOFTNESS = 35;
-
-    let last = 0;
-    const off = document.createElement('canvas');
-    off.width = WORK_W;
-    off.height = WORK_H;
-    const octx = off.getContext('2d', { willReadFrequently: true });
-
     canvas.width = WORK_W;
     canvas.height = WORK_H;
 
     let animationFrameId;
+    let last = 0;
 
     const process = (now) => {
       animationFrameId = requestAnimationFrame(process);
-      if (now - last < 40) return;
+      if (now - last < 60) return; // Cap at ~16fps to prevent CPU bottlenecks
       last = now;
 
-      if (video.readyState < 2) return;
+      if (video.readyState < 2 || video.paused || video.ended) return;
 
       try {
-        octx.drawImage(video, 0, 0, WORK_W, WORK_H);
-        const data = octx.getImageData(0, 0, WORK_W, WORK_H);
-        const d = data.data;
-
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i], g = d[i + 1], b = d[i + 2];
-
-          const dr = r - KEY_R, dg = g - KEY_G, db = b - KEY_B;
-          const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-
-          let alpha = (dist - THRESHOLD) / SOFTNESS;
-          alpha = alpha < 0 ? 0 : (alpha > 1 ? 1 : alpha);
-
-          if (alpha === 0) {
-            d[i + 3] = 0;
-          } else {
-            if (alpha < 1) {
-              d[i + 3] = (alpha * 255) | 0;
-              if (g > r && g > b) {
-                d[i + 1] = r > b ? r : b;
-              }
-            } else if (g > r && g > b) {
-              d[i + 1] = r > b ? r : b;
-            }
-          }
-        }
-
-        octx.putImageData(data, 0, 0);
-        ctx.clearRect(0, 0, WORK_W, WORK_H);
-        ctx.drawImage(off, 0, 0);
+        ctx.drawImage(video, 0, 0, WORK_W, WORK_H);
       } catch (e) {}
     };
 
@@ -79,23 +45,13 @@ export function VideoOverlay({ onCardShowTrigger }) {
       setOpacity(0);
     };
 
-    let shown = false;
-    const handleTimeUpdate = () => {
-      if (!shown && video.currentTime >= 2) {
-        shown = true;
-        if (onCardShowTrigger) onCardShowTrigger();
-      }
-    };
-
     video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('ended', handleEnded);
-    video.addEventListener('timeupdate', handleTimeUpdate);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('ended', handleEnded);
-      video.removeEventListener('timeupdate', handleTimeUpdate);
     };
   }, [onCardShowTrigger]);
 
@@ -107,6 +63,7 @@ export function VideoOverlay({ onCardShowTrigger }) {
         muted 
         autoPlay 
         playsInline
+        preload="metadata"
         className="absolute w-[1px] h-[1px] opacity-0 pointer-events-none"
       />
       

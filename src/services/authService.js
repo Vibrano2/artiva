@@ -1,4 +1,4 @@
-import { fetchWithAuth } from './apiConfig';
+import { mockDb } from '../data/mockDatabase';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'artiva_current_user',
@@ -9,27 +9,17 @@ export const AuthService = {
    * Register a standard client user
    */
   async register(idToken, first_name, last_name, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/register/client', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, first_name, last_name, role: 'client' })
-      });
-    } catch (err) {
-      // Fallback to /api/auth/register
-      data = await fetchWithAuth('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, first_name, last_name, role })
-      });
-    }
-    
     const user = {
-      ...(data.data || data.user || data),
-      token: idToken,
+      uid: `usr_${Date.now()}`,
+      first_name: first_name || 'Client',
+      last_name: last_name || 'User',
+      email: `${(first_name || 'user').toLowerCase()}@artiva.app`,
+      role: role || 'client',
+      token: idToken || `mock_token_${Date.now()}`
     };
-    
+
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: idToken, user };
+    return { token: user.token, user };
   },
 
   /**
@@ -43,69 +33,53 @@ export const AuthService = {
    * Register an artisan with profile, skills, banking info, and verification documents
    */
   async registerArtisan(artisanData) {
-    const payload = {
-      first_name: artisanData.first_name,
-      last_name: artisanData.last_name,
-      trade: artisanData.trade,
-      skills: artisanData.skills || artisanData.services || [],
-      location: typeof artisanData.location === 'object' ? artisanData.location : {
-        address: artisanData.location || artisanData.address || 'Life Camp, Abuja',
-        city: artisanData.city || 'Abuja',
-        state: artisanData.state || 'FCT',
-        lga: artisanData.lga || 'Abuja Municipal'
-      },
+    const uid = `art_${Date.now()}`;
+    const newArtisan = mockDb.saveArtisan({
+      ...artisanData,
+      uid,
+      id: uid,
+      first_name: artisanData.first_name || 'Artisan',
+      last_name: artisanData.last_name || 'Professional',
+      trade: artisanData.trade || 'Plumbing',
+      location: typeof artisanData.location === 'object' ? (artisanData.location.address || 'Life Camp, Abuja') : (artisanData.location || 'Life Camp, Abuja'),
       hourly_rate: Number(artisanData.hourly_rate) || 5000,
       experience_years: Number(artisanData.experience_years) || 5,
-      nin: artisanData.nin || '',
-      bank_details: artisanData.bank_details || {
-        account_number: artisanData.account_number || '',
-        bank_code: artisanData.bank_code || '058'
-      },
-      id_document_base64: artisanData.id_document_base64 || artisanData.id_photo || '',
-      work_photos_base64: artisanData.work_photos_base64 || artisanData.work_photos || []
+      skills: artisanData.skills || artisanData.services || ['General Maintenance'],
+      services: artisanData.skills || artisanData.services || ['General Maintenance'],
+      is_verified: false,
+      verified: false
+    });
+
+    const user = {
+      uid,
+      first_name: newArtisan.first_name,
+      last_name: newArtisan.last_name,
+      trade: newArtisan.trade,
+      location: newArtisan.location,
+      role: 'artisan',
+      token: `mock_art_token_${Date.now()}`
     };
 
-    let res;
-    try {
-      res = await fetchWithAuth('/api/auth/register/artisan', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch {
-      res = await fetchWithAuth('/api/artisans', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    }
-
-    const created = res.data || res.artisan || res;
-    return { success: true, data: created, uid: created.uid || created.id };
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    return { success: true, data: newArtisan, uid, artisanId: uid, user };
   },
 
   /**
-   * Authenticate and verify user session with a Firebase ID token
+   * Authenticate and verify user session
    */
   async login(idToken, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, role })
-      });
-    } catch {
-      data = await fetchWithAuth('/api/auth/firebase/verify', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, role })
-      });
-    }
-    
-    const user = {
-      ...(data.data || data.user || data),
-      token: idToken,
+    const existing = this.getCurrentUser();
+    const user = existing || {
+      uid: role === 'artisan' ? 'art_emeka_01' : `usr_${Date.now()}`,
+      first_name: role === 'artisan' ? 'Mr. Emeka' : 'Chioma',
+      last_name: role === 'artisan' ? 'Okonkwo' : 'Eze',
+      email: role === 'artisan' ? 'emeka@artiva.app' : 'chioma@example.com',
+      role: role || 'client',
+      token: idToken || `mock_token_${Date.now()}`
     };
-    
+
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: idToken, user };
+    return { token: user.token, user };
   },
 
   /**
@@ -119,34 +93,28 @@ export const AuthService = {
    * Send phone OTP
    */
   async sendPhoneOtp(phone) {
-    return await fetchWithAuth('/api/auth/phone/send-otp', {
-      method: 'POST',
-      body: JSON.stringify({ phone })
-    });
+    return {
+      success: true,
+      message: `OTP sent successfully to ${phone}`,
+      data: { phone }
+    };
   },
 
   /**
    * Verify phone OTP
    */
   async verifyPhoneOtp(phone, otp, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/phone/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ phone, otp, role })
-      });
-    } catch {
-      data = await fetchWithAuth('/api/auth/verify', {
-        method: 'POST',
-        body: JSON.stringify({ phone, otp, role })
-      });
-    }
-    
+    const cleanPhone = phone || '+2348012345678';
     const user = {
-      ...(data.data || data.user || data),
-      token: data.token || data.data?.token,
+      uid: role === 'artisan' ? 'art_emeka_01' : `usr_${Date.now()}`,
+      first_name: role === 'artisan' ? 'Mr. Emeka' : 'Verified User',
+      last_name: role === 'artisan' ? 'Okonkwo' : '',
+      phoneNumber: cleanPhone,
+      phone: cleanPhone,
+      role: role || 'client',
+      token: `mock_otp_token_${Date.now()}`
     };
-    
+
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
     return user;
   },
@@ -155,28 +123,17 @@ export const AuthService = {
    * Send password recovery email
    */
   async resetPassword(email) {
-    return await fetchWithAuth('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
+    return {
+      success: true,
+      message: `Password reset link sent to ${email}`
+    };
   },
 
   /**
    * Fetch current authenticated user's profile and assigned role
    */
   async getMe() {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/users/me');
-    } catch {
-      res = await fetchWithAuth('/api/auth/me');
-    }
-    const user = res.user || res.data || res;
-    if (user) {
-      const stored = this.getCurrentUser() || {};
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...stored, ...user }));
-    }
-    return user;
+    return this.getCurrentUser();
   },
 
   logout() {

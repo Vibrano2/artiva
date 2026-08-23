@@ -1,79 +1,55 @@
-import { fetchWithAuth } from './apiConfig';
+import { mockDb } from '../data/mockDatabase';
 
 export const ProformaService = {
   /**
-   * Artisan submits proforma invoice for a job
+   * Artisan submits proforma invoice locally
    */
   submitProformaInvoice: async (jobIdOrData, proformaData) => {
-    let jobId;
     let data;
     if (typeof jobIdOrData === 'object') {
       data = jobIdOrData;
-      jobId = data.job_id || data.jobId;
     } else {
-      jobId = jobIdOrData;
-      data = proformaData;
+      data = { job_id: jobIdOrData, ...proformaData };
     }
 
     const payload = {
+      job_id: data.job_id || data.jobId || 'job_demo',
       supplier_name: data.supplier_name || 'Abuja Hardware Mart',
-      materials_cost: Number(data.materials_cost) || 0,
-      labor_cost: Number(data.labor_cost) || 0,
-      total_amount: Number(data.total_amount) || (Number(data.materials_cost || 0) + Number(data.labor_cost || 0)),
-      items: data.items || [],
-      receipt_url: data.receipt_url || ''
+      materials_cost: Number(data.materials_cost) || Number(data.total_amount) || 20000,
+      labor_cost: Number(data.labor_cost) || 10000,
+      total_amount: Number(data.total_amount) || 30000,
+      items: data.items || [
+        { name: 'PPR High Pressure Pipes', quantity: 2, unit_price: 5000, total: 10000 },
+        { name: 'Pressure Control Valves', quantity: 2, unit_price: 5000, total: 10000 }
+      ],
+      receipt_url: data.receipt_url || data.invoice_document_url || ''
     };
 
-    if (jobId) {
-      try {
-        return await fetchWithAuth(`/api/jobs/${jobId}/proforma`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-      } catch {
-        return await fetchWithAuth('/api/proforma', {
-          method: 'POST',
-          body: JSON.stringify({ job_id: jobId, ...payload })
-        });
-      }
-    } else {
-      return await fetchWithAuth('/api/proforma', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    }
+    const newProf = mockDb.createProforma(payload);
+    return {
+      success: true,
+      message: 'Proforma submitted successfully',
+      data: newProf,
+      proforma: newProf
+    };
   },
 
   /**
    * Fetch proformas for a specific job
    */
   getJobProformas: async (jobId) => {
-    try {
-      const res = await fetchWithAuth(`/api/jobs/${jobId}/proforma`);
-      return res.data || (Array.isArray(res) ? res : [res]);
-    } catch {
-      const res = await fetchWithAuth(`/api/proforma/job/${jobId}`);
-      return res.data || (Array.isArray(res) ? res : [res]);
-    }
+    return mockDb.getProformas(jobId);
   },
 
   /**
    * Update proforma status (approve / reject)
    */
   updateProformaStatus: async (proformaId, status, notes = '') => {
-    try {
-      return await fetchWithAuth(`/api/proformas/${proformaId}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ status, notes })
-      });
-    } catch {
-      const endpoint = status === 'approved' 
-        ? `/api/admin/proforma/${proformaId}/approve` 
-        : `/api/admin/proforma/${proformaId}/reject`;
-      return await fetchWithAuth(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({ reason: notes, notes })
-      });
-    }
+    const updated = mockDb.updateProformaStatus(proformaId, status, notes);
+    return {
+      success: true,
+      message: `Proforma status updated to ${status}`,
+      data: updated
+    };
   }
 };

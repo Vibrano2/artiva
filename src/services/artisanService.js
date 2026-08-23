@@ -1,142 +1,132 @@
-import { fetchWithAuth } from './apiConfig';
+import { mockDb } from '../data/mockDatabase';
 import { AuthService } from './authService';
 
 export const ArtisanService = {
   /**
-   * Register a new artisan
+   * Register a new artisan locally
    */
   async signupArtisan(data) {
     return AuthService.registerArtisan(data);
   },
 
   /**
-   * Search and filter artisans
-   * @param {Object} filter - { trade, location, available }
+   * Search and filter artisans from local database
    */
   async getArtisans(filter = {}) {
-    const query = new URLSearchParams();
-    if (filter.trade && filter.trade !== 'All') query.append('trade', filter.trade);
-    if (filter.location && filter.location !== 'All') query.append('location', filter.location);
-    if (filter.available !== undefined) query.append('available', filter.available);
-    
-    const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetchWithAuth(`/api/artisans${queryString}`);
-    return res.data || (Array.isArray(res) ? res : []);
+    return mockDb.getArtisans(filter);
   },
 
   /**
    * Fetch specific artisan profile details
    */
   async getArtisanProfile(uid) {
-    const res = await fetchWithAuth(`/api/artisans/${uid}`);
-    return res.data || res;
+    return mockDb.getArtisanById(uid);
   },
 
   /**
    * Get reviews for a specific artisan
    */
   async getArtisanReviews(uid) {
-    const res = await fetchWithAuth(`/api/artisans/${uid}/reviews`);
-    return res.data || (Array.isArray(res) ? res : []);
+    return [
+      {
+        id: 'rev_1',
+        reviewer_name: 'Mrs. Amaka',
+        rating: 5,
+        comment: 'Fixed our leaking kitchen pipes in less than 30 minutes! Very neat and professional.',
+        created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString()
+      },
+      {
+        id: 'rev_2',
+        reviewer_name: 'Dr. Chidi',
+        rating: 5,
+        comment: 'Great craftsmanship and honest pricing. Highly recommended in Life Camp.',
+        created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString()
+      }
+    ];
   },
 
   /**
-   * Auto-match artisans for a job
+   * Auto-match artisans for a job based on trade
    */
   async matchArtisans(jobId) {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/artisans/match', {
-        method: 'POST',
-        body: JSON.stringify({ job_id: jobId })
-      });
-    } catch {
-      res = await fetchWithAuth(`/api/jobs/${jobId}/matches`);
-    }
-    return res.data || res;
+    const job = mockDb.getJobById(jobId);
+    const trade = job?.trade || 'Plumbing';
+    const matches = mockDb.getArtisans({ trade, available: true });
+
+    return {
+      success: true,
+      data: {
+        matches: (matches.length > 0 ? matches : mockDb.getArtisans()).map((artisan, index) => ({
+          match_id: `match_${jobId || 'job'}_${artisan.uid}`,
+          artisan: {
+            uid: artisan.uid,
+            id: artisan.uid,
+            first_name: artisan.first_name,
+            last_name: artisan.last_name,
+            trade: artisan.trade,
+            reputation_score: artisan.reputation_score || 4.9,
+            completed_jobs: artisan.completed_jobs || 30,
+            location: artisan.location,
+            work_photos: artisan.work_photos,
+            verified: artisan.verified || artisan.is_verified,
+            match_fee: 500
+          }
+        })),
+        count: matches.length
+      }
+    };
   },
 
   /**
-   * Update current artisan profile without passing UID in URL
+   * Update current artisan profile
    */
   async updateMyProfile(updateData) {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/artisans/me', {
-        method: 'PUT',
-        body: JSON.stringify(updateData)
-      });
-    } catch {
-      res = await fetchWithAuth('/api/artisans/me', {
-        method: 'PATCH',
-        body: JSON.stringify(updateData)
-      });
+    const user = AuthService.getCurrentUser();
+    if (user?.uid) {
+      return mockDb.updateArtisan(user.uid, updateData);
     }
-    return res.data || res;
+    return updateData;
   },
 
   /**
    * Update artisan availability status
    */
   async updateAvailability(uid, available) {
-    try {
-      return await this.updateMyProfile({ is_available: available });
-    } catch {
-      return await fetchWithAuth(`/api/artisans/${uid}/availability`, {
-        method: 'PATCH',
-        body: JSON.stringify({ is_available: available })
-      });
-    }
+    return mockDb.updateArtisan(uid, { available, is_available: available });
   },
 
   /**
    * Upload artisan profile photo
    */
   async uploadProfilePhoto(uid, file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    return await fetchWithAuth(`/api/artisans/${uid}/photo`, {
-      method: 'POST',
-      body: formData
-    });
+    return {
+      success: true,
+      url: typeof file === 'string' ? file : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80'
+    };
   },
 
   /**
    * Upload artisan ID document & NIN
    */
   async uploadIdDocument(uid, nin, file) {
-    const formData = new FormData();
-    formData.append('nin', nin);
-    formData.append('file', file);
-    return await fetchWithAuth(`/api/artisans/${uid}/id-document`, {
-      method: 'POST',
-      body: formData
-    });
+    mockDb.updateArtisan(uid, { nin });
+    return {
+      success: true,
+      message: 'ID document uploaded successfully'
+    };
   },
 
   /**
    * Fetch artisan dashboard metrics
    */
   async getArtisanDashboard(uid) {
-    try {
-      const res = await fetchWithAuth(`/api/artisans/${uid}/dashboard`);
-      const dashboardData = res.data || res || {};
-      return {
-        held_total: dashboardData.held_total || 0,
-        released_total: dashboardData.released_total || 0,
-        completed_jobs: dashboardData.completed_jobs || 0,
-        reputation_score: dashboardData.reputation_score || 0,
-        is_verified: dashboardData.is_verified || false
-      };
-    } catch {
-      const profile = await this.getArtisanProfile(uid);
-      return {
-        held_total: profile.held_total || 0,
-        released_total: profile.released_total || 0,
-        completed_jobs: profile.completed_jobs || 0,
-        reputation_score: profile.reputation_score || 4.8,
-        is_verified: profile.is_verified || false
-      };
-    }
+    const artisan = mockDb.getArtisanById(uid);
+    return {
+      held_total: 15000,
+      released_total: 85000,
+      completed_jobs: artisan?.completed_jobs || 34,
+      reputation_score: artisan?.reputation_score || 4.9,
+      is_verified: artisan?.is_verified ?? true
+    };
   }
 };
