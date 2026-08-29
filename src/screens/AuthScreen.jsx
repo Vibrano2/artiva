@@ -50,54 +50,45 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   /**
    * Handle Google Sign-In
    */
+  // Google & Apple OAuth — deferred to post-MVP (PRD §7.1).
+  // Phone OTP is the only functional auth path for launch.
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      const syncRes = await ApiService.login('mock_google_token', role);
-      const user = syncRes.user;
-
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const token = await result.user.getIdToken();
+      const syncRes = await ApiService.verifyFirebaseToken(token, role);
+      const user = syncRes.user ? { ...result.user, ...syncRes.user } : result.user;
       setLoading(false);
       setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Google successfully!', 'success');
-
-      if (role === 'artisan') {
-        navigateTo('artisan_dash');
-      } else {
-        navigateTo('client_dash');
-      }
+      navigateTo(role === 'artisan' ? 'artisan_dash' : 'client_dash');
     } catch (err) {
       setLoading(false);
-      const friendlyMsg = formatAuthError(err);
-      setError(friendlyMsg);
+      setError(formatAuthError(err));
     }
   };
 
-  /**
-   * Handle Apple Sign-In
-   */
   const handleAppleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      const syncRes = await ApiService.login('mock_apple_token', role);
-      const user = syncRes.user;
-
+      const provider = new OAuthProvider('apple.com');
+      const result = await signInWithPopup(auth, provider);
+      const token = await result.user.getIdToken();
+      const syncRes = await ApiService.verifyFirebaseToken(token, role);
+      const user = syncRes.user ? { ...result.user, ...syncRes.user } : result.user;
       setLoading(false);
       setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Apple successfully!', 'success');
-
-      if (role === 'artisan') {
-        navigateTo('artisan_dash');
-      } else {
-        navigateTo('client_dash');
-      }
+      navigateTo(role === 'artisan' ? 'artisan_dash' : 'client_dash');
     } catch (err) {
       setLoading(false);
-      const friendlyMsg = formatAuthError(err);
-      setError(friendlyMsg);
+      setError(formatAuthError(err));
     }
   };
 
