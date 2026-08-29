@@ -1,50 +1,60 @@
+import { fetchWithAuth } from './apiConfig';
+
 export const PaymentService = {
   /**
-   * Initialize Paystack Escrow transaction intent locally
+   * Initialize a consolidated Paystack escrow payment (job_value + ₦500 fee).
+   * PRD §7.3 / §9.4 — single checkout, amounts locked server-side.
    */
   async initializePayment(matchId, jobValue) {
-    const reference = `verifix_${Date.now()}`;
+    const res = await fetchWithAuth('/api/payments/initialize', {
+      method: 'POST',
+      body: JSON.stringify({ match_id: matchId, job_value: Number(jobValue) })
+    });
+
     return {
       success: true,
-      message: 'Payment initialized successfully',
+      message: res.message || 'Payment initialized successfully',
       data: {
-        authorization_url: `https://checkout.paystack.com/demo_${reference}`,
-        access_code: `code_${reference}`,
-        reference
+        authorization_url: res.authorization_url,
+        access_code: res.access_code,
+        reference: res.reference,
+        transaction_id: res.transaction_id
       }
     };
   },
 
   /**
-   * Verify transaction with Paystack reference
+   * Verify a Paystack transaction by reference
    */
   async verifyPayment(reference) {
+    let res;
+    try {
+      res = await fetchWithAuth(`/api/payments/verify/${reference}`);
+    } catch {
+      res = await fetchWithAuth('/api/payments/verify', {
+        method: 'POST',
+        body: JSON.stringify({ reference })
+      });
+    }
     return {
       success: true,
-      message: 'Transaction verified successfully',
-      data: {
-        status: 'success',
-        reference: reference || `verifix_${Date.now()}`,
-        amount: 20000,
-        currency: 'NGN',
-        paid_at: new Date().toISOString()
-      }
+      message: res.message || 'Transaction verified',
+      data: res.data || res
     };
   },
 
   /**
-   * Release escrow payout to artisan account
+   * Release escrow payout to artisan after Mark Complete
    */
   async releaseEscrowPayout(jobId, amount) {
+    const res = await fetchWithAuth(`/api/payments/release/${jobId}`, {
+      method: 'POST',
+      body: JSON.stringify({ amount })
+    });
     return {
       success: true,
-      message: 'Escrow funds disbursed to artisan account successfully',
-      data: {
-        job_id: jobId,
-        amount: amount || 20000,
-        status: 'DISBURSED_FULL',
-        transferred_at: new Date().toISOString()
-      }
+      message: res.message || 'Escrow funds disbursed',
+      data: res.data || res
     };
   }
 };

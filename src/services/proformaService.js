@@ -1,8 +1,8 @@
-import { mockDb } from '../data/mockDatabase';
+import { fetchWithAuth } from './apiConfig';
 
 export const ProformaService = {
   /**
-   * Artisan submits proforma invoice locally
+   * Artisan submits a supplier proforma invoice (PRD A-009 / §7.6)
    */
   submitProformaInvoice: async (jobIdOrData, proformaData) => {
     let data;
@@ -13,24 +13,27 @@ export const ProformaService = {
     }
 
     const payload = {
-      job_id: data.job_id || data.jobId || 'job_demo',
-      supplier_name: data.supplier_name || 'Abuja Hardware Mart',
-      materials_cost: Number(data.materials_cost) || Number(data.total_amount) || 20000,
-      labor_cost: Number(data.labor_cost) || 10000,
-      total_amount: Number(data.total_amount) || 30000,
-      items: data.items || [
-        { name: 'PPR High Pressure Pipes', quantity: 2, unit_price: 5000, total: 10000 },
-        { name: 'Pressure Control Valves', quantity: 2, unit_price: 5000, total: 10000 }
-      ],
-      receipt_url: data.receipt_url || data.invoice_document_url || ''
+      job_id: data.job_id || data.jobId,
+      supplier_name: data.supplier_name,
+      total_amount: Number(data.total_amount) || 0,
+      materials_cost: Number(data.materials_cost) || 0,
+      labor_cost: Number(data.labor_cost) || 0,
+      items: data.items || [],
+      receipt_url: data.receipt_url || data.invoice_document_url || '',
+      invoice_document_url: data.invoice_document_url || data.receipt_url || '',
+      supplier_recipient_code: data.supplier_recipient_code || ''
     };
 
-    const newProf = mockDb.createProforma(payload);
+    const res = await fetchWithAuth(`/api/proforma/submit`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
     return {
       success: true,
-      message: 'Proforma submitted successfully',
-      data: newProf,
-      proforma: newProf
+      message: res.message || 'Proforma submitted successfully',
+      data: res.data || res,
+      proforma: res.data || res
     };
   },
 
@@ -38,18 +41,27 @@ export const ProformaService = {
    * Fetch proformas for a specific job
    */
   getJobProformas: async (jobId) => {
-    return mockDb.getProformas(jobId);
+    const res = await fetchWithAuth(`/api/proforma/job/${jobId}`);
+    return res.data || (Array.isArray(res) ? res : []);
   },
 
   /**
-   * Update proforma status (approve / reject)
+   * Update proforma status — admin only (PRD AD-005)
    */
   updateProformaStatus: async (proformaId, status, notes = '') => {
-    const updated = mockDb.updateProformaStatus(proformaId, status, notes);
+    const endpoint = status === 'approved'
+      ? `/api/admin/proforma/${proformaId}/approve`
+      : `/api/admin/proforma/${proformaId}/reject`;
+
+    const res = await fetchWithAuth(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ notes, reason: notes })
+    });
+
     return {
       success: true,
-      message: `Proforma status updated to ${status}`,
-      data: updated
+      message: res.message || `Proforma ${status}`,
+      data: res.data || res
     };
   }
 };

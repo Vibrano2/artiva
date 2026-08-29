@@ -1,21 +1,48 @@
+import { getAuth } from 'firebase/auth';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
 /**
- * Client-Side Standalone API Config
- * Disconnects remote backend servers and provides safe local simulation.
+ * Fetch wrapper that automatically attaches the Firebase ID token as a Bearer header.
+ * Throws on non-2xx responses with the server error message when available.
  */
+export async function fetchWithAuth(url, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+
+  // Remove Content-Type for FormData so the browser sets the correct multipart boundary
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
+
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch {
+    // No authenticated user — proceed unauthenticated (public endpoints)
+  }
+
+  const res = await fetch(`${BASE_URL}${url}`, { ...options, headers });
+
+  if (!res.ok) {
+    let errMsg = `HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      errMsg = body.error || body.message || errMsg;
+    } catch { /* non-JSON error body */ }
+    throw new Error(errMsg);
+  }
+
+  return res.json();
+}
 
 export const apiClient = {
-  get: async (url) => ({ data: { success: true } }),
-  post: async (url, data) => ({ data: { success: true, data } }),
-  put: async (url, data) => ({ data: { success: true, data } }),
-  patch: async (url, data) => ({ data: { success: true, data } }),
-  delete: async (url) => ({ data: { success: true } }),
+  get:    (url)       => fetchWithAuth(url),
+  post:   (url, data) => fetchWithAuth(url, { method: 'POST',  body: JSON.stringify(data) }),
+  put:    (url, data) => fetchWithAuth(url, { method: 'PUT',   body: JSON.stringify(data) }),
+  patch:  (url, data) => fetchWithAuth(url, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (url)       => fetchWithAuth(url, { method: 'DELETE' }),
 };
-
-export async function fetchWithAuth(url, options = {}) {
-  // Return simulated successful response if called directly
-  return {
-    success: true,
-    message: 'Local mock response',
-    data: options.body ? (typeof options.body === 'string' ? JSON.parse(options.body) : options.body) : {}
-  };
-}

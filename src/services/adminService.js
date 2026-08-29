@@ -1,131 +1,112 @@
-import { mockDb } from '../data/mockDatabase';
+import { fetchWithAuth } from './apiConfig';
 
 export const AdminService = {
   /**
-   * Generic request helper for backward compatibility
+   * Generic request helper (backward compatibility)
    */
   async request(endpoint, options = {}) {
-    if (endpoint.includes('proforma-queue')) {
-      return { data: { queue: this.getAdminProformaQueue() } };
-    }
-    if (endpoint.includes('/approve')) {
-      const match = endpoint.match(/proforma\/([^/]+)\/approve/);
-      if (match) return this.approveProforma(match[1]);
-    }
-    if (endpoint.includes('/reject')) {
-      const match = endpoint.match(/proforma\/([^/]+)\/reject/);
-      if (match) return this.rejectProforma(match[1]);
-    }
-    return { success: true, data: {} };
+    return fetchWithAuth(endpoint, options);
   },
 
   /**
-   * Fetch aggregate dashboard metrics
+   * Admin dashboard metrics (PRD AD-003)
    */
   async getAdminStats() {
-    const artisans = mockDb.getArtisans();
-    const jobs = mockDb.getJobs();
+    const res = await fetchWithAuth('/api/admin/analytics');
     return {
       success: true,
-      data: {
-        total_artisans: artisans.length,
-        active_jobs: jobs.filter(j => j.status !== 'completed').length,
-        completed_jobs: jobs.filter(j => j.status === 'completed').length,
-        total_escrow_held: 125000,
-        revenue: 45000
-      }
+      data: res.data || res
     };
   },
 
   /**
-   * List newly registered artisans awaiting background check / verification
+   * Artisan verification queue (PRD AD-001)
    */
   async getArtisanVerificationQueue() {
-    return mockDb.getAdminQueue();
+    const res = await fetchWithAuth('/api/admin/verification-queue');
+    return res.data || (Array.isArray(res) ? res : []);
   },
 
-  /**
-   * Alias for backward compatibility
-   */
   async getAdminQueue() {
     return this.getArtisanVerificationQueue();
   },
 
   /**
-   * Approve an artisan's application and grant verification badge
+   * Approve an artisan's verification (PRD AD-001)
    */
   async verifyArtisan(uid, verified = true, reason = '') {
-    return mockDb.verifyArtisanInQueue(uid, verified, reason);
+    const endpoint = verified
+      ? `/api/admin/verify/${uid}`
+      : `/api/admin/reject/${uid}`;
+
+    const res = await fetchWithAuth(endpoint, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+    return res.data || res;
   },
 
   /**
-   * Reject an artisan's application with a reason
+   * Reject an artisan with a reason
    */
   async rejectArtisan(uid, reason) {
     return this.verifyArtisan(uid, false, reason);
   },
 
   /**
-   * Proforma quotes awaiting price / materials approval
+   * Proforma invoice queue (PRD AD-005)
    */
   async getAdminProformaQueue() {
-    return mockDb.getProformas();
+    const res = await fetchWithAuth('/api/admin/proforma-queue');
+    return res.data || (Array.isArray(res) ? res : []);
   },
 
   /**
-   * Admin approves quote
+   * Approve a proforma — triggers direct supplier payout (PRD AD-005 / §7.6)
    */
-  async approveProforma(id, notes = 'Materials verified') {
-    const updated = mockDb.updateProformaStatus(id, 'approved', notes);
-    return {
-      success: true,
-      message: 'Proforma approved successfully',
-      data: updated
-    };
-  },
-  
-  /**
-   * Admin rejects quote with a reason
-   */
-  async rejectProforma(id, reason = 'Quote rejected') {
-    const updated = mockDb.updateProformaStatus(id, 'rejected', reason);
-    return {
-      success: true,
-      message: 'Proforma rejected',
-      data: updated
-    };
-  },
-
-  /**
-   * Manually add an artisan from the admin panel
-   */
-  async addArtisan(data) {
-    const newArtisan = mockDb.saveArtisan({
-      ...data,
-      is_verified: true,
-      verified: true
+  async approveProforma(id, notes = '') {
+    const res = await fetchWithAuth(`/api/admin/proforma/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes })
     });
     return {
       success: true,
-      message: 'Artisan added successfully',
-      data: newArtisan
+      message: res.message || 'Proforma approved successfully',
+      data: res.data || res
     };
   },
 
   /**
-   * Resolve an escalated job dispute
+   * Reject a proforma with a reason
    */
-  async resolveDispute(disputeId, action = 'refund_client') {
+  async rejectProforma(id, reason = '') {
+    const res = await fetchWithAuth(`/api/admin/proforma/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
     return {
       success: true,
-      message: `Dispute resolved with action: ${action}`
+      message: res.message || 'Proforma rejected',
+      data: res.data || res
     };
   },
 
   /**
-   * Get flagged items / risk alerts
+   * Artisan profiles flagged for no-response (PRD AD-004)
    */
   async getAdminFlags() {
-    return [];
+    const res = await fetchWithAuth('/api/admin/flags');
+    return res.data || (Array.isArray(res) ? res : []);
+  },
+
+  /**
+   * Resolve a job dispute (PRD §5.2 — manual review)
+   */
+  async resolveDispute(disputeId, action = 'refund_client') {
+    const res = await fetchWithAuth(`/api/admin/disputes/${disputeId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+    return res.data || res;
   }
 };
