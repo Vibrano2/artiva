@@ -102,7 +102,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   };
 
   /**
-   * Handle Send OTP for Nigerian phone number
+   * Handle Send OTP for Nigerian phone number via real Firebase Auth SMS
    */
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
@@ -122,13 +122,20 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     setActiveFormattedPhone(formatted);
 
     try {
-      await ApiService.sendPhoneOtp(formatted);
-      setConfirmationResult(null);
+      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
+        setError('Security check expired. Please try sending OTP again.');
+      });
+
+      // Real Firebase SMS OTP dispatch
+      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
+      setConfirmationResult(confirmation);
+
       setLoading(false);
       setStep(2);
-      showToast(`OTP sent to ${formatted} (Use 123456 or any 6 digits)`, 'success');
+      showToast(`SMS OTP sent from Firebase to ${formatted}`, 'success');
       startTimer();
     } catch (err) {
+      console.error('[Firebase Phone Auth] Real SMS OTP dispatch error:', err);
       setLoading(false);
       const friendlyMsg = formatAuthError(err);
       setError(friendlyMsg);

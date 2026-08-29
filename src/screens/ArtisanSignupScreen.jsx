@@ -78,15 +78,22 @@ export function ArtisanSignupScreen() {
       
       setLoading(true);
       try {
-        await ApiService.sendPhoneOtp(formatted);
-        setConfirmationResult(null);
+        const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
+          setError('Security check expired. Please retry.');
+        });
+
+        // Real Firebase SMS OTP dispatch
+        const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
+        setConfirmationResult(confirmation);
+
         setLoading(false);
         setStep(2);
-        showToast(`OTP sent to ${formatted} (Use 123456 or any 6 digits)`, 'success');
+        showToast(`SMS OTP sent from Firebase to ${formatted}`, 'success');
         startTimer();
-      } catch (backendErr) {
+      } catch (err) {
+        console.error('[Firebase Artisan Auth] Real SMS OTP dispatch error:', err);
         setLoading(false);
-        const friendlyMsg = formatAuthError(backendErr);
+        const friendlyMsg = formatAuthError(err);
         setError(friendlyMsg);
       }
       return;
@@ -109,7 +116,17 @@ export function ArtisanSignupScreen() {
     const { formatted } = formatNigerianPhoneNumber(phone);
 
     try {
-      const syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
+      let syncedUser;
+      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
+        const result = await confirmationResult.confirm(otp);
+        const user = result.user;
+        const token = await user.getIdToken();
+        const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
+        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
+      } else {
+        syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
+      }
+
       setCurrentUser(syncedUser);
       setLoading(false);
       showToast('Phone verified successfully!', 'success');
@@ -128,14 +145,15 @@ export function ArtisanSignupScreen() {
     const { formatted } = formatNigerianPhoneNumber(phone);
 
     try {
-      await ApiService.sendPhoneOtp(formatted);
-      setConfirmationResult(null);
+      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container');
+      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
+      setConfirmationResult(confirmation);
       setLoading(false);
-      showToast(`New OTP sent to ${formatted}`, 'success');
+      showToast(`New SMS OTP sent to ${formatted}`, 'success');
       startTimer();
-    } catch (backendErr) {
+    } catch (err) {
       setLoading(false);
-      const friendlyMsg = formatAuthError(backendErr);
+      const friendlyMsg = formatAuthError(err);
       setError(friendlyMsg);
     }
   };
