@@ -5,7 +5,6 @@ import { PaymentService } from './paymentService';
 import { AdminService } from './adminService';
 import { ChatService } from './chatService';
 import { ProformaService } from './proformaService';
-import { mockDb } from '../data/mockDatabase';
 
 export * from './apiConfig';
 export * from './authService';
@@ -16,7 +15,6 @@ export * from './adminService';
 export * from './chatService';
 export * from './proformaService';
 export * from './constants';
-export { mockDb };
 
 export const ApiService = {
   ...AuthService,
@@ -26,7 +24,6 @@ export const ApiService = {
   ...AdminService,
   ...ChatService,
   ...ProformaService,
-  mockDb,
   init: () => {},
 };
 

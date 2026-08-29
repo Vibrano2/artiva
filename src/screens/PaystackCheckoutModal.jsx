@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { Lock, ShieldCheck, CreditCard, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Lock, ShieldCheck, CreditCard, AlertCircle, RefreshCw, CheckCircle2, ArrowRight, ExternalLink } from 'lucide-react';
 
 export function PaystackCheckoutModal({ job, artisan }) {
   const { navigateTo, activeJob, activeArtisan, showToast } = useApp();
@@ -13,6 +13,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
   const [paymentState, setPaymentState] = useState('summary');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [authorizationUrl, setAuthorizationUrl] = useState(null);
 
   const matchFee = targetArtisan?.match_fee || 500;
 
@@ -22,6 +23,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
     setErrorMsg(null);
 
     try {
+      // Ensure artisan is selected against this job before payment
       if (targetJob?.job_id && targetArtisan?.uid) {
         try {
           await ApiService.selectArtisan(targetJob.job_id, targetArtisan.uid);
@@ -31,19 +33,29 @@ export function PaystackCheckoutModal({ job, artisan }) {
       }
 
       const matchId = targetJob?.match_id || `match_${targetJob?.job_id}_${targetArtisan?.uid}`;
-      await ApiService.initializePayment(matchId, targetJob?.budget);
+      const jobValue = targetJob?.budget || targetJob?.job_value || 0;
+      const result = await ApiService.initializePayment(matchId, jobValue);
 
-      setTimeout(async () => {
+      const url = result?.data?.authorization_url || result?.authorization_url;
+      if (url) {
+        // Redirect to real Paystack checkout — opens in same tab
         setLoading(false);
-        setPaymentState('success');
-        showToast('Match fee held in escrow successfully!', 'success');
-      }, 1200);
-
+        setAuthorizationUrl(url);
+        setPaymentState('redirect');
+      } else {
+        throw new Error('No Paystack authorization URL returned. Check backend configuration.');
+      }
     } catch (err) {
       setLoading(false);
       setPaymentState('failed');
       setErrorMsg(err.message);
     }
+  };
+
+  // Called when user returns from Paystack via browser back or deep link
+  const handleReturnFromPaystack = () => {
+    setPaymentState('success');
+    showToast('Payment confirmed — chat is now unlocked!', 'success');
   };
 
   const handleSimulatePaymentFailure = () => {
@@ -124,7 +136,7 @@ export function PaystackCheckoutModal({ job, artisan }) {
                   className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
                 >
                   <Lock className="w-4 h-4 stroke-[2.5]" />
-                  <span>Pay ₦{((targetJob?.budget || 0) + matchFee).toLocaleString()} securely</span>
+                  <span>Pay ₦{((targetJob?.budget || targetJob?.job_value || 0) + matchFee).toLocaleString()} securely</span>
                 </button>
 
                 <button
@@ -144,6 +156,37 @@ export function PaystackCheckoutModal({ job, artisan }) {
                 Contacting Paystack Gateway...
               </h3>
               <p className="text-xs text-slate-500">Processing escrow reservation over secure network.</p>
+            </div>
+          )}
+
+          {paymentState === 'redirect' && authorizationUrl && (
+            <div className="py-6 text-center space-y-5 animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-[#F4F8F8] border border-[#16858F]/30 flex items-center justify-center mx-auto">
+                <CreditCard className="w-8 h-8 text-[#16858F]" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#0E3B40] font-['Outfit']">
+                  Ready to Pay Securely
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+                  You'll be taken to Paystack's secure checkout. Return here once payment is confirmed.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <a
+                  href={authorizationUrl}
+                  className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
+                >
+                  <ExternalLink className="w-4 h-4 stroke-[2.5]" />
+                  <span>Open Paystack Checkout</span>
+                </a>
+                <button
+                  onClick={handleReturnFromPaystack}
+                  className="w-full py-2 text-xs text-slate-400 hover:text-emerald-600 font-medium transition-colors"
+                >
+                  I've completed payment — continue
+                </button>
+              </div>
             </div>
           )}
 
