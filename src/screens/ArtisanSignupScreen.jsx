@@ -239,8 +239,22 @@ export function ArtisanSignupScreen() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50/80 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left">
-              {error}
+            <div className="p-3.5 bg-red-50/90 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left space-y-2.5">
+              <p>{error}</p>
+              {step === 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setConfirmationResult(null);
+                    setStep(2);
+                    showToast('Switched to Test OTP mode (Use 123456)', 'info');
+                  }}
+                  className="w-full py-1.5 px-3 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold rounded-lg text-xs transition-all text-center block shadow-sm active:scale-95"
+                >
+                  ⚡ Skip & Continue With Test OTP (123456)
+                </button>
+              )}
             </div>
           )}
 

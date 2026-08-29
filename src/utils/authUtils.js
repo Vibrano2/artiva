@@ -117,7 +117,11 @@ export function formatAuthError(error) {
 
     case 'auth/quota-exceeded':
     case 'auth/too-many-requests':
-      return 'Too many SMS requests sent. Please wait a few minutes before trying again or use a configured test phone number.';
+      return 'SMS quota exceeded for today. Firebase requires a Blaze plan for unrestricted live SMS, or you can add a free test phone number in the Firebase Console.';
+
+    case 'auth/error-code:-39':
+    case 'auth/billing-not-enabled':
+      return 'Firebase SMS billing restriction (auth/error-code:-39): Real SMS to international carriers requires the Firebase Blaze plan or adding this phone as a "Phone number for testing" in the Firebase Console.';
 
     case 'auth/popup-closed-by-user':
       return 'Sign-in window was closed before completion. Please try again.';
