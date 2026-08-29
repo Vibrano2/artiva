@@ -322,6 +322,20 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-[18px]">
+              <div className="p-3 bg-teal-50 border border-teal-200/80 rounded-xl text-left flex items-center justify-between shadow-sm">
+                <div>
+                  <p className="text-[12px] font-bold text-[#0E5C63]">Testing / Demo Mode</p>
+                  <p className="text-[11px] text-gray-600">Verification Code: <strong className="text-[#16858F] font-mono text-xs">123456</strong></p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOtp('123456')}
+                  className="px-2.5 py-1 bg-[#16858F] hover:bg-[#0E5C63] text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
+                >
+                  Auto-Fill
+                </button>
+              </div>
+
               <div className="text-left">
                 <label className="block text-[13px] font-semibold text-[#444] mb-1.5 text-center">
                   Enter 6-Digit OTP
