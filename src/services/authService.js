@@ -117,26 +117,18 @@ export const AuthService = {
    * Verify phone OTP and start session (PRD §7.1)
    */
   async verifyPhoneOtp(phone, otp, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/phone/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ phone, otp, role })
-      });
-    } catch {
-      data = await fetchWithAuth('/api/auth/verify', {
-        method: 'POST',
-        body: JSON.stringify({ phone, otp, role })
-      });
-    }
+    const data = await fetchWithAuth('/api/auth/phone/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp, role })
+    });
 
     const user = {
-      ...(data.data || data.user || data),
+      ...(data.user || data.data || data),
       token: data.token || data.data?.token,
     };
 
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return user;
+    return { token: data.token, user };
   },
 
   async resetPassword(email) {

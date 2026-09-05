@@ -7,6 +7,7 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { ShieldCheck, ArrowRight, Check, RefreshCw } from 'lucide-react';
 import { 
   signInWithPhoneNumber, 
+  signInWithCustomToken,
   GoogleAuthProvider, 
   OAuthProvider, 
   signInWithPopup 
@@ -152,7 +153,15 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         const syncRes = await ApiService.verifyFirebaseToken(token, role);
         syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
       } else {
-        syncedUser = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
+        const res = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
+        syncedUser = res.user || res;
+        if (res.token) {
+          try {
+            await signInWithCustomToken(auth, res.token);
+          } catch (tokErr) {
+            console.warn('Firebase custom token sign-in warning:', tokErr);
+          }
+        }
       }
 
       setLoading(false);
