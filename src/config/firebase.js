@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
+import { getPerformance } from 'firebase/performance';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -30,6 +31,17 @@ if (typeof window !== 'undefined') {
       analytics = getAnalytics(app);
     }
   }).catch(() => {});
+}
+
+// Initialize Performance Monitoring safely only in browser environments
+export let perf = null;
+if (typeof window !== 'undefined') {
+  try {
+    perf = getPerformance(app);
+  } catch (perfErr) {
+    // Non-fatal if browser doesn't support PerformanceObserver or blocked by extensions
+    console.debug('Firebase Performance Monitoring unavailable:', perfErr);
+  }
 }
 
 // Connect to Emulators if configured
