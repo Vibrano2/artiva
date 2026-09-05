@@ -5,7 +5,6 @@ import { useApp } from '../context/AppContext';
 import { ApiService, ALL_TRADES, TARGET_LOCATIONS, TradeServicesMap } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { Wrench, ShieldCheck, ArrowRight, Upload, Phone, FileText, RefreshCw, KeyRound } from 'lucide-react';
-import { VideoOverlay } from '../components/VideoOverlay';
 import { signInWithPhoneNumber } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { 
@@ -18,7 +17,6 @@ export function ArtisanSignupScreen() {
   const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
 
   const [step, setStep] = useState(1);
-  const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   
   const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
@@ -200,7 +198,6 @@ export function ArtisanSignupScreen() {
 
   return (
     <div className="min-h-screen bg-[#0E3B40] flex flex-col justify-between relative overflow-hidden pb-12">
-      <VideoOverlay onCardShowTrigger={() => setCardVisible(true)} />
       <div className="relative z-30">
         <Header title="Artisan Registration" backTo="onboarding" />
         <OfflineBanner onRetry={handleSubmitSignup} />
@@ -210,12 +207,9 @@ export function ArtisanSignupScreen() {
 
       <main className="max-w-md mx-auto w-full px-4 py-6 flex-1 relative z-20">
         <div 
-          className="bg-white/55 backdrop-blur-[6px] p-8 rounded-[18px] transition-all duration-800 ease-in-out space-y-6"
+          className="bg-white/55 backdrop-blur-[6px] p-8 rounded-[18px] space-y-6"
           style={{
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)',
-            opacity: cardVisible ? 1 : 0,
-            pointerEvents: cardVisible ? 'auto' : 'none',
-            transform: cardVisible ? 'translateY(0)' : 'translateY(20px)'
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)'
           }}
         >
           <div className="flex flex-col items-center mb-2">

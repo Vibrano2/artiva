@@ -5,7 +5,6 @@ import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { ShieldCheck, ArrowRight, Check, RefreshCw } from 'lucide-react';
-import { VideoOverlay } from '../components/VideoOverlay';
 import { 
   signInWithPhoneNumber, 
   GoogleAuthProvider, 
@@ -30,7 +29,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [timer, setTimer] = useState(30);
-  const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [activeFormattedPhone, setActiveFormattedPhone] = useState('');
 
@@ -176,8 +174,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
   return (
     <div className="min-h-screen bg-[#0E3B40] flex flex-col justify-between relative overflow-hidden">
-      <VideoOverlay onCardShowTrigger={() => setCardVisible(true)} />
-
       <div className="relative z-30">
         <Header backTo="onboarding" />
       </div>
@@ -191,12 +187,9 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
       <main className="max-w-md mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center relative z-20">
         <div 
-          className="bg-white/55 backdrop-blur-[6px] p-11 pb-9 rounded-[18px] text-center transition-all duration-800 ease-in-out"
+          className="bg-white/55 backdrop-blur-[6px] p-11 pb-9 rounded-[18px] text-center"
           style={{
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)',
-            opacity: cardVisible ? 1 : 0,
-            pointerEvents: cardVisible ? 'auto' : 'none',
-            transform: cardVisible ? 'translateY(0)' : 'translateY(20px)'
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)'
           }}
         >
           <div className="mb-6 flex flex-col items-center">
