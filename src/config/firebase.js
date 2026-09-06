@@ -5,13 +5,13 @@ import { getAnalytics, isSupported } from 'firebase/analytics';
 import { getPerformance } from 'firebase/performance';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDZcq5lOksvPAoG5NM1Almxt97kc4W_BIQ",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "artiva-f24a8.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "artiva-f24a8",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "artiva-f24a8.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "982788741499",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:982788741499:web:eb198aafb9f6f43adb45de",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-YX17QZB29E"
 };
 
 // Ensure app is initialized only once (Singleton pattern)
