@@ -27,7 +27,7 @@ export function ClientDashboardScreen() {
     try {
       const filter = selectedTrade !== 'All' ? { trade: selectedTrade } : {};
       const list = await ApiService.getArtisans(filter);
-      setArtisans(list);
+      setArtisans(Array.isArray(list) ? list : []);
 
       const storedJobs = JSON.parse(localStorage.getItem('artiva_jobs') || '[]');
       setActiveJobs(storedJobs);
@@ -178,7 +178,7 @@ export function ClientDashboardScreen() {
             </div>
           ) : (
             <div className="space-y-3">
-              {artisans.map((artisan) => (
+              {(Array.isArray(artisans) ? artisans : []).map((artisan) => (
                 <ArtisanCard
                   key={artisan.uid}
                   artisan={artisan}

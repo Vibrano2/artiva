@@ -64,7 +64,7 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
         </span>
       </div>
 
-      {artisan.services && artisan.services.length > 0 && (
+      {Array.isArray(artisan.services) && artisan.services.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {artisan.services.slice(0, 3).map((service, idx) => (
             <span key={idx} className="px-2 py-0.5 bg-[#E8F5F6] text-[#0E3B40] text-[11px] font-medium rounded-md">

@@ -31,9 +31,10 @@ export function FindArtisansPage() {
       if (availableOnly) filter.available = true;
 
       let list = await ApiService.getArtisans(filter);
+      if (!Array.isArray(list)) list = [];
       
       if (selectedLocation !== 'All') {
-        list = list.filter(a => a.location.toLowerCase().includes(selectedLocation.toLowerCase()));
+        list = list.filter(a => a.location && a.location.toLowerCase().includes(selectedLocation.toLowerCase()));
       }
 
       setArtisans(list);
@@ -155,7 +156,7 @@ export function FindArtisansPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {artisans.map((artisan) => (
+              {(Array.isArray(artisans) ? artisans : []).map((artisan) => (
                 <ArtisanCard
                   key={artisan.uid}
                   artisan={artisan}

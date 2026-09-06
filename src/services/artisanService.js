@@ -21,7 +21,12 @@ export const ArtisanService = {
     
     const queryString = query.toString() ? `?${query.toString()}` : '';
     const res = await fetchWithAuth(`/api/artisans${queryString}`);
-    return res.data || (Array.isArray(res) ? res : []);
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    if (Array.isArray(res.data?.artisans)) return res.data.artisans;
+    if (Array.isArray(res.artisans)) return res.artisans;
+    return [];
   },
 
   /**
@@ -37,7 +42,11 @@ export const ArtisanService = {
    */
   async getArtisanReviews(uid) {
     const res = await fetchWithAuth(`/api/artisans/${uid}/reviews`);
-    return res.data || (Array.isArray(res) ? res : []);
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    if (Array.isArray(res.reviews)) return res.reviews;
+    return [];
   },
 
   /**

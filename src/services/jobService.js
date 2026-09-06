@@ -39,7 +39,12 @@ export const JobService = {
     Object.entries(filters).forEach(([k, v]) => { if (v !== undefined) query.append(k, v); });
     const qs = query.toString() ? `?${query.toString()}` : '';
     const res = await fetchWithAuth(`/api/jobs${qs}`);
-    return res.jobs || res.data || (Array.isArray(res) ? res : []);
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.jobs)) return res.jobs;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.data?.data)) return res.data.data;
+    if (Array.isArray(res.data?.jobs)) return res.data.jobs;
+    return [];
   },
 
   /**
