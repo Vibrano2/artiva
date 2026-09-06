@@ -153,9 +153,10 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         const syncRes = await ApiService.verifyFirebaseToken(token, role);
         syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
       } else {
-        const res = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
+        const phoneToVerify = activeFormattedPhone || formatNigerianPhoneNumber(phone).formatted || '+2348000000000';
+        const res = await ApiService.verifyPhoneOtp(phoneToVerify, otp, role);
         syncedUser = res.user || res;
-        if (res.token) {
+        if (res.token && typeof res.token === 'string' && res.token.split('.').length === 3) {
           try {
             await signInWithCustomToken(auth, res.token);
           } catch (tokErr) {
@@ -272,6 +273,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
                   onClick={() => {
                     setError(null);
                     setConfirmationResult(null);
+                    const { formatted } = formatNigerianPhoneNumber(phone);
+                    if (formatted) setActiveFormattedPhone(formatted);
                     setStep(2);
                     showToast('Switched to Test OTP mode (Use 123456)', 'info');
                   }}

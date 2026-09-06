@@ -25,6 +25,20 @@ export async function fetchWithAuth(url, options = {}) {
     // No authenticated user — proceed unauthenticated (public endpoints)
   }
 
+  if (!headers['Authorization'] && typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('artiva_current_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.token) {
+          headers['Authorization'] = `Bearer ${parsed.token}`;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const res = await fetch(`${BASE_URL}${url}`, { ...options, headers });
 
   if (!res.ok) {

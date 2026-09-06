@@ -122,7 +122,8 @@ export function ArtisanSignupScreen() {
         const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
         syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
       } else {
-        syncedUser = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
+        const res = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
+        syncedUser = res.user || res;
       }
 
       setCurrentUser(syncedUser);
