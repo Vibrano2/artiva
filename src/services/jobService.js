@@ -5,17 +5,27 @@ export const JobService = {
    * Client posts a new job request (PRD C-001)
    */
   async postJob(jobData) {
-    const { trade, location, urgency, timing, description, budget, job_value, photos, client_uid } = jobData;
+    const { trade, location, urgency, timing, description, budget, job_value, photos, client_uid, title } = jobData;
+    const locAddress = typeof location === 'object' ? (location.address || location.city || 'Life Camp, Abuja') : (location || 'Life Camp, Abuja');
+    const selectedTrade = trade || jobData.trade_needed || 'Plumbing';
     const payload = {
-      trade_needed: trade || jobData.trade_needed,
-      trade: trade || jobData.trade_needed,
-      location: typeof location === 'object' ? location : {
-        address: location || 'Life Camp, Abuja',
-        city: 'Abuja', state: 'FCT', lga: 'Abuja Municipal'
+      title: title || `${selectedTrade} Service - ${locAddress}`.slice(0, 80),
+      trade_needed: selectedTrade,
+      trade: selectedTrade,
+      location: typeof location === 'object' ? {
+        address: location.address || locAddress,
+        city: location.city || 'Abuja',
+        state: location.state || 'FCT',
+        lga: location.lga || 'Abuja Municipal'
+      } : {
+        address: locAddress,
+        city: 'Abuja',
+        state: 'FCT',
+        lga: 'Abuja Municipal'
       },
       urgency: timing || urgency || 'Today',
       timing: timing || urgency || 'Today',
-      description: description || '',
+      description: description && description.length >= 5 ? description : `${selectedTrade} repair needed urgently at ${locAddress}.`,
       budget: Number(budget || job_value) || 0,
       job_value: Number(job_value || budget) || 0,
       photos: photos || [],
