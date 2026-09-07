@@ -1,159 +1,208 @@
-import { fetchWithAuth } from './apiConfig';
+/**
+ * artisanService.js
+ *
+ * Used by:
+ *   ClientDashboardScreen → getArtisans({trade?})          → artisan[]
+ *   MatchListScreen       → getJobMatches(jobId)            → artisan[] (flat)
+ *   ArtisanDashboardScreen→ getArtisanDashboard(uid)        → {held_total,released_total,completed_jobs,reputation_score,is_verified}
+ *                         → updateAvailability(uid, bool)
+ *   AdminAddArtisanScreen → addArtisan(payload)             → {success}
+ *   AdminQueueScreen      → (via adminService) getAdminQueue()
+ */
+
+import { auth, db } from '../config/firebase';
+import {
+  collection, doc, getDoc, getDocs, query,
+  serverTimestamp, setDoc, updateDoc, where,
+} from 'firebase/firestore';
 import { AuthService } from './authService';
+import { mapArtisan, mapJob, requireCurrentUser, uploadUserFile, withoutUndefined } from './firebaseData';
 
 export const ArtisanService = {
   /**
-   * Register a new artisan
+   * signupArtisan(data) — delegates to AuthService
    */
   async signupArtisan(data) {
-    return AuthService.registerArtisan(data);
+    return AuthService.signupArtisan(data);
   },
 
   /**
-   * Search and filter artisans
-   * @param {Object} filter - { trade, location, available }
+   * getArtisans({ trade?, available? })
+   *
+   * Returns all public artisan profiles, optionally filtered.
+   * ClientDashboard calls this with { trade } or {} for "All".
    */
   async getArtisans(filter = {}) {
-    const query = new URLSearchParams();
-    if (filter.trade && filter.trade !== 'All') query.append('trade', filter.trade);
-    if (filter.location && filter.location !== 'All') query.append('location', filter.location);
-    if (filter.available !== undefined) query.append('available', filter.available);
-    
-    const queryString = query.toString() ? `?${query.toString()}` : '';
-    const res = await fetchWithAuth(`/api/artisans${queryString}`);
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res.data)) return res.data;
-    if (Array.isArray(res.data?.data)) return res.data.data;
-    if (Array.isArray(res.data?.artisans)) return res.data.artisans;
-    if (Array.isArray(res.artisans)) return res.artisans;
-    return [];
+    const snaps = await getDocs(collection(db, 'artisanProfiles'));
+    return snaps.docs
+      .map(mapArtisan)
+      .filter((a) => !filter.trade || a.trade === filter.trade)
+      .filter((a) => filter.available === undefined || a.available === filter.available);
   },
 
   /**
-   * Fetch specific artisan profile details
+   * getArtisanProfile(uid)
    */
   async getArtisanProfile(uid) {
-    const res = await fetchWithAuth(`/api/artisans/${uid}`);
-    return res.data || res;
+    const snap = await getDoc(doc(db, 'artisanProfiles', uid));
+    return snap.exists() ? mapArtisan(snap) : null;
   },
 
   /**
-   * Get reviews for a specific artisan
+   * getArtisanReviews(uid)
    */
   async getArtisanReviews(uid) {
-    const res = await fetchWithAuth(`/api/artisans/${uid}/reviews`);
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res.data)) return res.data;
-    if (Array.isArray(res.data?.data)) return res.data.data;
-    if (Array.isArray(res.reviews)) return res.reviews;
-    return [];
+    const snaps = await getDocs(
+      query(collection(db, 'jobs'), where('artisanId', '==', uid))
+    );
+    return snaps.docs
+      .map(mapJob)
+      .filter((j) => j.rating)
+      .map((j) => ({ id: j.id, rating: j.rating, comment: j.review || '', created_at: j.updated_at }));
   },
 
   /**
-   * Auto-match artisans for a job
+   * matchArtisans(jobId)
+   *
+   * Hard filter: trade + available + isVerified.
+   * Sort: priority_score desc → completed_jobs desc (PRD Section 7.2).
+   * Returns: { success, data: { matches: [{match_id, artisan}], count } }
    */
   async matchArtisans(jobId) {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/artisans/match', {
-        method: 'POST',
-        body: JSON.stringify({ job_id: jobId })
-      });
-    } catch {
-      res = await fetchWithAuth(`/api/jobs/${jobId}/matches`);
-    }
-    return res.data || res;
+    const jobSnap = await getDoc(doc(db, 'jobs', jobId));
+    if (!jobSnap.exists()) throw new Error('Job not found.');
+    const job = mapJob(jobSnap);
+
+    const all = await this.getArtisans({ trade: job.trade, available: true });
+    const verified = all.filter((a) => a.isVerified);
+
+    // PRD priority sort
+    const sorted = [...verified].sort((a, b) => {
+      const pa = a.priority_score ?? 0;
+      const pb = b.priority_score ?? 0;
+      if (pb !== pa) return pb - pa;
+      return (b.completed_jobs ?? 0) - (a.completed_jobs ?? 0);
+    });
+
+    return {
+      success: true,
+      data: {
+        matches: sorted.map((a) => ({
+          match_id: `match_${jobId}_${a.uid}`,
+          artisan: {
+            uid: a.uid,
+            id: a.uid,
+            first_name: a.first_name,
+            last_name: a.last_name,
+            trade: a.trade,
+            tagline: a.tagline || '',
+            services: a.services || [],
+            skills: a.skills || [],
+            reputation_score: a.reputation_score ?? 0,
+            completed_jobs: a.completed_jobs ?? 0,
+            priority_score: a.priority_score ?? 0,
+            location: a.location,
+            distance_km: a.distance_km ?? '< 5',
+            work_photos: a.work_photos || [],
+            verified: Boolean(a.isVerified),
+            is_verified: Boolean(a.isVerified),
+            nin_verified: Boolean(a.isVerified),
+            available: a.available,
+            match_fee: 500,
+          },
+        })),
+        count: sorted.length,
+      },
+    };
   },
 
   /**
-   * Update current artisan profile without passing UID in URL
+   * updateMyProfile(updateData)
    */
   async updateMyProfile(updateData) {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/artisans/me', {
-        method: 'PUT',
-        body: JSON.stringify(updateData)
-      });
-    } catch {
-      res = await fetchWithAuth('/api/artisans/me', {
-        method: 'PATCH',
-        body: JSON.stringify(updateData)
-      });
-    }
-    return res.data || res;
+    const user = requireCurrentUser();
+    // Strip fields the artisan must not self-write
+    const { nin, isVerified, verified, uid, no_response_flags, priority_score, ...safe } = updateData;
+    await updateDoc(doc(db, 'artisanProfiles', user.uid), withoutUndefined({
+      ...safe,
+      updatedAt: serverTimestamp(),
+    }));
+    return this.getArtisanProfile(user.uid);
   },
 
   /**
-   * Update artisan availability status
+   * updateAvailability(uid, available)
+   *
+   * Called by ArtisanDashboardScreen toggle button.
    */
   async updateAvailability(uid, available) {
-    try {
-      return await this.updateMyProfile({ is_available: available });
-    } catch {
-      return await fetchWithAuth(`/api/artisans/${uid}/availability`, {
-        method: 'PATCH',
-        body: JSON.stringify({ is_available: available })
-      });
-    }
+    const user = requireCurrentUser();
+    if (user.uid !== uid) throw new Error('You can only update your own availability.');
+    await updateDoc(doc(db, 'artisanProfiles', uid), {
+      available: Boolean(available),
+      updatedAt: serverTimestamp(),
+    });
+    return this.getArtisanProfile(uid);
   },
 
   /**
-   * Upload artisan profile photo
+   * uploadProfilePhoto(uid, file)
    */
   async uploadProfilePhoto(uid, file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    return await fetchWithAuth(`/api/artisans/${uid}/photo`, {
-      method: 'POST',
-      body: formData
-    });
+    const user = requireCurrentUser();
+    if (user.uid !== uid) throw new Error('You can only upload your own profile photo.');
+    const url = typeof file === 'string'
+      ? file
+      : await uploadUserFile(`users/${uid}/profile/${Date.now()}-${file.name}`, file);
+    await updateDoc(doc(db, 'artisanProfiles', uid), { profile_photo: url, updatedAt: serverTimestamp() });
+    return { success: true, url };
   },
 
   /**
-   * Upload artisan ID document & NIN
+   * uploadIdDocument(uid, nin, file)
    */
   async uploadIdDocument(uid, nin, file) {
-    const formData = new FormData();
-    formData.append('nin', nin);
-    formData.append('file', file);
-    return await fetchWithAuth(`/api/artisans/${uid}/id-document`, {
-      method: 'POST',
-      body: formData
-    });
+    const user = requireCurrentUser();
+    if (user.uid !== uid) throw new Error('You can only upload your own verification document.');
+    const url = await uploadUserFile(`artisans/${uid}/verification/${Date.now()}-${file.name}`, file);
+    await setDoc(
+      doc(db, 'privateArtisans', uid),
+      { uid, nin, idDocumentUrl: url, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    return { success: true, message: 'ID document uploaded successfully', url };
   },
 
   /**
-   * Fetch artisan dashboard metrics
+   * getArtisanDashboard(uid)
+   *
+   * Called by ArtisanDashboardScreen.
+   * Returns: { held_total, released_total, completed_jobs, reputation_score, is_verified }
    */
   async getArtisanDashboard(uid) {
-    try {
-      const res = await fetchWithAuth(`/api/artisans/${uid}/dashboard`);
-      const d = res.data || res || {};
-      // Backend returns nested: { profile, finances: { held, released }, matches: { completed, total } }
-      const finances = d.finances || {};
-      const matches = d.matches || {};
-      const profile = d.profile || {};
-      return {
-        held_total: finances.held ?? d.held_total ?? 0,
-        released_total: finances.released ?? d.released_total ?? 0,
-        completed_jobs: matches.completed ?? d.completed_jobs ?? 0,
-        reputation_score: profile.reputation_score ?? d.reputation_score ?? 0,
-        is_verified: profile.is_verified ?? d.is_verified ?? false,
-        // Pass through extra fields callers may use
-        finances,
-        matches,
-        profile
-      };
-    } catch {
-      const profile = await this.getArtisanProfile(uid);
-      return {
-        held_total: profile.held_total || 0,
-        released_total: profile.released_total || 0,
-        completed_jobs: profile.completed_jobs || 0,
-        reputation_score: profile.reputation_score || 4.8,
-        is_verified: profile.is_verified || false
-      };
-    }
-  }
+    const [artisan, jobsSnap, paymentsSnap] = await Promise.all([
+      this.getArtisanProfile(uid),
+      getDocs(query(collection(db, 'jobs'), where('artisanId', '==', uid))),
+      getDocs(query(collection(db, 'payments'), where('artisanId', '==', uid))),
+    ]);
+
+    const jobs = jobsSnap.docs.map(mapJob);
+    const completedJobs = jobs.filter((j) => j.status === 'completed').length;
+
+    const payments = paymentsSnap.docs.map((d) => d.data());
+    const heldTotal = payments
+      .filter((p) => p.status === 'paid' && p.payoutStatus !== 'disbursed')
+      .reduce((s, p) => s + Number(p.jobValue || 0), 0);
+    const releasedTotal = payments
+      .filter((p) => p.payoutStatus === 'disbursed' || p.payoutStatus === 'confirmed')
+      .reduce((s, p) => s + Number(p.artisanNet || 0), 0);
+
+    return {
+      held_total: heldTotal,
+      released_total: releasedTotal,
+      completed_jobs: completedJobs,
+      reputation_score: artisan?.reputation_score ?? 0,
+      is_verified: artisan?.isVerified ?? false,
+    };
+  },
 };

@@ -492,7 +492,7 @@ export function ArtisanSignupScreen() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(2)}
                   className="w-1/3 p-[14px] text-[15px] border border-[#e0e0e0] bg-[#fafafa] text-[#6b6b6b] hover:text-[#1f1f1f] font-bold rounded-[10px] transition-colors"
                 >
                   Back

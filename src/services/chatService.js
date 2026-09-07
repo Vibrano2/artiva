@@ -1,108 +1,88 @@
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
-import { fetchWithAuth } from './apiConfig';
-import { AuthService } from './authService';
+/**
+ * chatService.js
+ *
+ * Used by:
+ *   ChatScreen → subscribeToChat(jobId, callback) → unsubscribe fn
+ *              → sendChatMessage(jobId, content, senderUid) → { id, sender_uid, content }
+ *   LiveTrackingScreen → subscribeToTracking(jobId, cb), streamGpsLocation(jobId, coords)
+ */
+
+import { db } from '../config/firebase';
+import {
+  addDoc, collection, doc,
+  onSnapshot, orderBy, query,
+  serverTimestamp, setDoc,
+} from 'firebase/firestore';
+import { mapMessage, requireCurrentUser } from './firebaseData';
 
 export const ChatService = {
   /**
-   * Real-time listener for chat messages using Firestore.
-   * Messages live at jobs/{jobId}/messages (PRD §7.4).
-   * Falls back to REST polling if Firestore is unavailable.
+   * subscribeToChat(jobId, callback)
    *
-   * @param {string} jobId
-   * @param {Function} callback - called with the messages array on each update
-   * @returns {Function} unsubscribe
+   * Real-time Firestore listener for jobs/{jobId}/messages.
+   * Messages are ordered by createdAt asc.
+   * callback receives: Message[]  where message has { id, sender_uid, content, text, created_at }
+   *
+   * Returns unsubscribe function.
    */
   subscribeToChat(jobId, callback) {
-    try {
-      const db = getFirestore();
-      const msgsRef = collection(db, 'jobs', String(jobId), 'messages');
-      const q = query(msgsRef, orderBy('created_at', 'asc'));
-
-      return onSnapshot(q, (snap) => {
-        const messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        callback(messages);
-      }, () => {
-        // Firestore listener failed — fall back to one-time REST fetch
-        this.getChatMessages(jobId).then(callback).catch(() => callback([]));
-      });
-    } catch {
-      // Firestore SDK not initialised — REST fallback
-      this.getChatMessages(jobId).then(callback).catch(() => callback([]));
-      return () => {};
-    }
+    const key = String(jobId || 'default');
+    return onSnapshot(
+      query(collection(db, 'jobs', key, 'messages'), orderBy('createdAt', 'asc')),
+      (snap) => callback(snap.docs.map(mapMessage))
+    );
   },
 
   /**
-   * Fetch chat message history via REST (PRD §9.5)
+   * getChatMessages(jobId) — one-shot fetch
    */
   async getChatMessages(jobId) {
-    try {
-      const res = await fetchWithAuth(`/api/chat/job/${jobId}`);
-      return res.messages || res.data || (Array.isArray(res) ? res : []);
-    } catch {
-      return [];
-    }
+    return new Promise((resolve, reject) => {
+      const unsub = this.subscribeToChat(jobId, (msgs) => { unsub(); resolve(msgs); }, reject);
+    });
   },
 
   /**
-   * Send a chat message (PRD §7.4).
-   * Tries Firestore direct write first (lower latency), falls back to REST.
+   * sendChatMessage(jobId, content, senderUid)
+   *
+   * Writes a message to jobs/{jobId}/messages.
+   * Returns: { id, sender_uid, content }
    */
   async sendChatMessage(jobId, content, senderUid) {
-    const uid = senderUid || AuthService.getCurrentUser()?.uid;
-
-    // Try Firestore direct write
-    try {
-      const db = getFirestore();
-      const msgsRef = collection(db, 'jobs', String(jobId), 'messages');
-      await addDoc(msgsRef, {
-        job_id: jobId,
-        sender_uid: uid,
-        content,
-        is_read: false,
-        created_at: serverTimestamp()
-      });
-      return { success: true };
-    } catch {
-      // Fall back to REST
-    }
-
-    const res = await fetchWithAuth(`/api/chat/job/${jobId}`, {
-      method: 'POST',
-      body: JSON.stringify({ content, sender_uid: uid })
+    const key = String(jobId || 'default');
+    const user = requireCurrentUser();
+    const ref = await addDoc(collection(db, 'jobs', key, 'messages'), {
+      senderUid: user.uid,
+      content: String(content || '').trim(),
+      createdAt: serverTimestamp(),
     });
-    return res.data || res;
+    return { id: ref.id, sender_uid: user.uid, content };
   },
 
   /**
-   * Real-time artisan GPS tracking simulation (frontend-only, no backend needed).
+   * subscribeToTracking(jobId, callback)
+   *
+   * Real-time listener for jobs/{jobId}/tracking/current.
+   * Returns unsubscribe function.
    */
   subscribeToTracking(jobId, callback) {
-    const clientLocation = [9.0632, 7.4233];
-    let current = [9.0550, 7.4100];
-
-    const interval = setInterval(() => {
-      const [lat, lng] = current;
-      const [tLat, tLng] = clientLocation;
-      const latDiff = tLat - lat;
-      const lngDiff = tLng - lng;
-
-      if (Math.abs(latDiff) < 0.0001 && Math.abs(lngDiff) < 0.0001) {
-        callback({ lat: tLat, lng: tLng, heading: 0, status: 'arrived' });
-        clearInterval(interval);
-        return;
-      }
-      current = [lat + latDiff * 0.1, lng + lngDiff * 0.1];
-      callback({ lat: current[0], lng: current[1], heading: 45, status: 'en_route' });
-    }, 2000);
-
-    return () => clearInterval(interval);
+    return onSnapshot(doc(db, 'jobs', jobId, 'tracking', 'current'), (snap) => {
+      if (snap.exists()) callback(snap.data());
+    });
   },
 
+  /**
+   * streamGpsLocation(jobId, { latitude, longitude, heading, status })
+   *
+   * Artisan pushes their GPS position. Merges into tracking/current.
+   */
   async streamGpsLocation(jobId, { latitude, longitude, heading = 0, status = 'en_route' }) {
-    return fetchWithAuth(`/api/jobs/${jobId}/tracking/arrive`, {
-      method: 'POST',
-      body: JSON.stringify({ latitude, longitude, heading, status })
-    });
-  }
+    const user = requireCurrentUser();
+    await setDoc(
+      doc(db, 'jobs', jobId, 'tracking', 'current'),
+      { artisanId: user.uid, latitude, longitude, heading, status, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    return { success: true };
+  },
 };

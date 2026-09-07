@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ApiService } from '../services';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const AppContext = createContext();
 
@@ -124,6 +125,18 @@ export function AppProvider({ children }) {
         const parsed = JSON.parse(storedUser);
         setCurrentUser(parsed);
         setUserRole(parsed.role || 'client');
+
+        // If artisan, hydrate trade/location from artisanProfiles
+        if ((parsed.role === 'artisan') && parsed.uid) {
+          getDoc(doc(db, 'artisanProfiles', parsed.uid)).then((snap) => {
+            if (snap.exists()) {
+              const profile = snap.data();
+              const hydrated = { ...parsed, trade: profile.trade, location: profile.location };
+              setCurrentUser(hydrated);
+              localStorage.setItem('artiva_current_user', JSON.stringify(hydrated));
+            }
+          }).catch(() => {});
+        }
       }
     } catch (e) {
       console.error(e);

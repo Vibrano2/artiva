@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
-import { Calculator, FileText, Send, AlertCircle } from 'lucide-react';
+import { Calculator, FileText, Send, AlertCircle, Upload } from 'lucide-react';
 
 export function ArtisanProformaScreen({ job, matchId }) {
   const { navigateTo, showToast } = useApp();

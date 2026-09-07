@@ -12,6 +12,7 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [urgency, setUrgency] = useState('Today');
   const [description, setDescription] = useState('');
+  const [budget, setBudget] = useState('');
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -24,6 +25,10 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
       setError('Please enter a short description of what needs repair.');
       return;
     }
+    if (!budget || isNaN(Number(budget)) || Number(budget) <= 0) {
+      setError('Please enter an estimated job value (₦).');
+      return;
+    }
 
     setError(null);
     setLoading(true);
@@ -34,8 +39,9 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
         location,
         urgency,
         description,
+        budget: Number(budget),
         photos,
-        client_uid: currentUser?.uid || 'user_demo_client'
+        client_uid: currentUser?.uid
       });
 
       setLoading(false);
@@ -130,7 +136,26 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
 
             <div>
               <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
-                4. Job Details / Issue Description
+                4. Estimated Job Value (₦)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-3.5 text-sm font-bold text-slate-500">₦</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="e.g. 15000"
+                  className="w-full p-3.5 pl-8 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-2 focus:ring-[#16858F]/20 focus:outline-none"
+                  required
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">This is the amount held in escrow. You only release it when the job is done.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#0E3B40] uppercase tracking-wider mb-2">
+                5. Job Details / Issue Description
               </label>
               <textarea
                 value={description}

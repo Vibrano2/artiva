@@ -2,17 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
-import { ShieldCheck, UserCheck, Users, Briefcase, DollarSign, Activity } from 'lucide-react';
+import { ShieldCheck, UserCheck, Users, Briefcase, DollarSign, Activity, KeyRound } from 'lucide-react';
 
 export function AdminDashboardScreen() {
-  const { navigateTo } = useApp();
+  const { navigateTo, showToast } = useApp();
+  const [bootstrapping, setBootstrapping] = useState(false);
+  const [stats, setStats] = useState(null);
 
-  // Placeholder metrics, could be fetched from an Admin API later
+  useEffect(() => {
+    ApiService.getAdminStats()
+      .then((res) => setStats(res.data))
+      .catch(() => {}); // non-critical; fall back to placeholder
+  }, []);
+
+  const handleBootstrapAdmin = async () => {
+    setBootstrapping(true);
+    try {
+      await ApiService.bootstrapAdmin();
+      showToast('Admin claim granted! Sign out and back in to activate.', 'success');
+    } catch (err) {
+      showToast('Bootstrap failed: ' + err.message, 'error');
+    } finally {
+      setBootstrapping(false);
+    }
+  };
+
   const metrics = [
-    { title: 'Total Artisans', value: '45', icon: <Users className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-100' },
-    { title: 'Active Jobs', value: '12', icon: <Briefcase className="w-5 h-5 text-emerald-600" />, bg: 'bg-emerald-100' },
-    { title: 'Total Escrow', value: '₦125,000', icon: <DollarSign className="w-5 h-5 text-amber-600" />, bg: 'bg-amber-100' },
-    { title: 'System Health', value: '99.9%', icon: <Activity className="w-5 h-5 text-purple-600" />, bg: 'bg-purple-100' },
+    { title: 'Total Artisans', value: stats ? String(stats.total_artisans) : '—', icon: <Users className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-100' },
+    { title: 'Active Jobs', value: stats ? String(stats.active_jobs) : '—', icon: <Briefcase className="w-5 h-5 text-emerald-600" />, bg: 'bg-emerald-100' },
+    { title: 'Total Escrow', value: stats ? `₦${Number(stats.total_escrow_held).toLocaleString()}` : '—', icon: <DollarSign className="w-5 h-5 text-amber-600" />, bg: 'bg-amber-100' },
+    { title: 'Revenue', value: stats ? `₦${Number(stats.revenue).toLocaleString()}` : '—', icon: <Activity className="w-5 h-5 text-purple-600" />, bg: 'bg-purple-100' },
   ];
 
   return (
@@ -74,6 +93,21 @@ export function AdminDashboardScreen() {
             <div>
               <h3 className="font-bold text-[#0E3B40] text-sm">Add Artisan Manually</h3>
               <p className="text-xs text-slate-500 mt-0.5">Bypass OTP and directly register a verified artisan.</p>
+            </div>
+          </button>
+          <button
+            onClick={handleBootstrapAdmin}
+            disabled={bootstrapping}
+            className="w-full bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-[#16858F] transition-colors btn-press text-left disabled:opacity-50"
+          >
+            <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center shrink-0">
+              <KeyRound className="w-6 h-6 text-[#16858F]" />
+            </div>
+            <div>
+              <h3 className="font-bold text-[#0E3B40] text-sm">
+                {bootstrapping ? 'Granting Claim…' : 'Bootstrap Admin Claim'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">One-time setup: grants admin custom claim to your account.</p>
             </div>
           </button>
         </div>

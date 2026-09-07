@@ -1,67 +1,84 @@
-import { fetchWithAuth } from './apiConfig';
+/**
+ * proformaService.js
+ *
+ * Used by:
+ *   ArtisanProformaScreen → submitProformaInvoice({job_id, supplier_name, total_amount, invoice_document_url})
+ *                           → { success, message, data, proforma }
+ */
+
+import { db, functions } from '../config/firebase';
+import {
+  collection, getDocs, query, where,
+} from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { mapProforma, requireCurrentUser } from './firebaseData';
 
 export const ProformaService = {
   /**
-   * Artisan submits a supplier proforma invoice (PRD A-009 / §7.6)
+   * submitProformaInvoice(jobIdOrData, proformaData?)
+   *
+   * Accepts either:
+   *   submitProformaInvoice({ job_id, supplier_name, total_amount, invoice_document_url })
+   *   submitProformaInvoice(jobId, { supplier_name, total_amount, ... })
+   *
+   * Returns: { success, message, data: { id, job_id, supplier_name, total_amount, ... }, proforma }
    */
-  submitProformaInvoice: async (jobIdOrData, proformaData) => {
-    let data;
-    if (typeof jobIdOrData === 'object') {
-      data = jobIdOrData;
-    } else {
-      data = { job_id: jobIdOrData, ...proformaData };
-    }
+  async submitProformaInvoice(jobIdOrData, proformaData) {
+    const raw =
+      typeof jobIdOrData === 'object'
+        ? jobIdOrData
+        : { job_id: jobIdOrData, ...proformaData };
+
+    const user = requireCurrentUser();
 
     const payload = {
-      job_id: data.job_id || data.jobId,
-      supplier_name: data.supplier_name,
-      total_amount: Number(data.total_amount) || 0,
-      materials_cost: Number(data.materials_cost) || 0,
-      labor_cost: Number(data.labor_cost) || 0,
-      items: data.items || [],
-      receipt_url: data.receipt_url || data.invoice_document_url || '',
-      invoice_document_url: data.invoice_document_url || data.receipt_url || '',
-      supplier_recipient_code: data.supplier_recipient_code || ''
+      job_id: raw.job_id || raw.jobId || '',
+      supplier_name: raw.supplier_name || 'Local Hardware Store',
+      materials_cost: Number(raw.materials_cost) || 0,
+      labor_cost: Number(raw.labor_cost) || 0,
+      total_amount: Number(raw.total_amount) || 0,
+      items: raw.items || [],
+      receipt_url: raw.receipt_url || raw.invoice_document_url || '',
+      description: raw.description || '',
     };
 
-    const res = await fetchWithAuth(`/api/proforma/submit`, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    if (!payload.job_id) throw new Error('job_id is required to submit a proforma invoice.');
+    if (payload.total_amount <= 0) throw new Error('Total amount must be greater than 0.');
+    if (!payload.receipt_url) throw new Error('Please upload a proforma invoice document.');
+
+    const fn = httpsCallable(functions, 'submitProforma');
+    const response = await fn({
+      jobId: payload.job_id,
+      supplierName: payload.supplier_name,
+      totalAmount: payload.total_amount,
+      receiptUrl: payload.receipt_url,
+      items: payload.items,
+      description: payload.description,
     });
 
+    const result = { id: response.data.id, ...payload, artisanId: user.uid, status: 'pending' };
     return {
       success: true,
-      message: res.message || 'Proforma submitted successfully',
-      data: res.data || res,
-      proforma: res.data || res
+      message: 'Proforma invoice submitted for admin review.',
+      data: result,
+      proforma: result,
     };
   },
 
   /**
-   * Fetch proformas for a specific job
+   * getJobProformas(jobId)
    */
-  getJobProformas: async (jobId) => {
-    const res = await fetchWithAuth(`/api/proforma/job/${jobId}`);
-    return res.data || (Array.isArray(res) ? res : []);
+  async getJobProformas(jobId) {
+    const snaps = await getDocs(
+      query(collection(db, 'proformas'), where('jobId', '==', jobId))
+    );
+    return snaps.docs.map(mapProforma);
   },
 
   /**
-   * Update proforma status — admin only (PRD AD-005)
+   * updateProformaStatus(proformaId, status, notes)
    */
-  updateProformaStatus: async (proformaId, status, notes = '') => {
-    const endpoint = status === 'approved'
-      ? `/api/admin/proforma/${proformaId}/approve`
-      : `/api/admin/proforma/${proformaId}/reject`;
-
-    const res = await fetchWithAuth(endpoint, {
-      method: 'POST',
-      body: JSON.stringify({ notes, reason: notes })
-    });
-
-    return {
-      success: true,
-      message: res.message || `Proforma ${status}`,
-      data: res.data || res
-    };
-  }
+  async updateProformaStatus(proformaId, status, notes = '') {
+    throw new Error('Proforma review is restricted to the admin approval workflow.');
+  },
 };

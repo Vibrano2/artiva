@@ -11,40 +11,21 @@ export function ChatScreen({ job, artisan }) {
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
 
-  const matchId = job ? `${job.job_id}_${artisan?.uid}` : 'demo_match_id';
+  const jobId = job?.job_id;
   const isClient = currentUser?.role !== 'artisan';
 
   useEffect(() => {
-    let pollInterval;
-    
-    const fetchMessages = async () => {
-      try {
-        const fetchedMessages = await ApiService.getChatMessages(matchId);
-        setMessages(fetchedMessages || []);
-        setLoading(false);
-      } catch (error) {
-        console.warn("API Chat Fetch Error (using fallback):", error);
-        if (messages.length === 0) {
-          setMessages([
-            {
-              id: 'm1',
-              sender_uid: artisan?.uid || 'artisan',
-              text: `Hello ${currentUser?.first_name || 'there'}! I received your job request. How can I help?`,
-              created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-            }
-          ]);
-        }
-        setLoading(false);
-      }
-    };
+    if (!jobId) {
+      setLoading(false);
+      return undefined;
+    }
 
-    fetchMessages();
-    
-    // Poll every 5 seconds since we are moving away from direct Firebase snapshot
-    pollInterval = setInterval(fetchMessages, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [matchId, artisan?.uid, currentUser?.first_name]);
+    const unsubscribe = ApiService.subscribeToChat(jobId, (fetchedMessages) => {
+      setMessages(fetchedMessages);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, [jobId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -74,7 +55,8 @@ export function ChatScreen({ job, artisan }) {
     ]);
 
     try {
-      await ApiService.sendChatMessage(matchId, messageText);
+      if (!jobId) throw new Error('A job is required to send a message.');
+      await ApiService.sendChatMessage(jobId, messageText, currentUser?.uid);
     } catch (err) {
       console.error("Send message error:", err);
       showToast('Message sending failed. Check connection.', 'error');
@@ -123,7 +105,7 @@ export function ChatScreen({ job, artisan }) {
       <main className="flex-1 px-4 py-4 overflow-y-auto space-y-4">
         <div className="text-center pb-4">
           <span className="inline-block bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-            ₦{job?.match_fee || 500} Match Fee Held in Escrow
+            ₦{((job?.budget || 0) + (job?.match_fee || 500)).toLocaleString()} Held in Escrow
           </span>
         </div>
 

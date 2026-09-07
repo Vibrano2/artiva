@@ -4,14 +4,11 @@ import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { PRD_ARTISANS } from '../data/prdPeople';
-import { Lock, DollarSign, Award, Star, ShieldCheck, Power, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lock, DollarSign, Award, Star, ShieldCheck, Power, MessageSquare, ArrowRight, CheckCircle2, FileText } from 'lucide-react';
 
 export function ArtisanDashboardScreen({ artisanId }) {
   const { navigateTo, currentUser, showToast } = useApp();
-  const targetUid = artisanId || currentUser?.uid || 'artisan_001';
-  // PRD v1.9 Section 4.3 — Mr. Emeka is the named artisan persona
-  const prdFallback = PRD_ARTISANS[0];
+  const targetUid = artisanId || currentUser?.uid;
 
   const [stats, setStats] = useState(null);
   const [available, setAvailable] = useState(true);
@@ -25,12 +22,12 @@ export function ArtisanDashboardScreen({ artisanId }) {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const data = await ApiService.getArtisanDashboard(targetUid);
+      const [data, artisanJobs] = await Promise.all([
+        ApiService.getArtisanDashboard(targetUid),
+        ApiService.getJobs({ artisanId: targetUid }),
+      ]);
       setStats(data);
-
-      const allJobs = JSON.parse(localStorage.getItem('artiva_jobs') || '[]');
-      setJobs(allJobs);
-
+      setJobs(artisanJobs);
       setLoading(false);
     } catch (err) {
       setLoading(false);
@@ -60,14 +57,14 @@ export function ArtisanDashboardScreen({ artisanId }) {
           <div>
             <div className="flex items-center gap-1.5">
               <h2 className="font-bold text-[#0E3B40] text-base font-['Outfit']">
-                {currentUser?.first_name || prdFallback.first_name} {currentUser?.last_name || prdFallback.last_name}
+                {currentUser?.first_name} {currentUser?.last_name}
               </h2>
               <span className="p-0.5 bg-[#16858F] text-white rounded-full" title="Verified Artisan">
                 <ShieldCheck className="w-3.5 h-3.5" />
               </span>
             </div>
 
-            <p className="text-xs text-[#16858F] font-semibold">{currentUser?.trade || prdFallback.trade} • {currentUser?.location || prdFallback.location}</p>
+            <p className="text-xs text-[#16858F] font-semibold">{currentUser?.trade} • {currentUser?.location}</p>
           </div>
 
           <button
@@ -147,18 +144,44 @@ export function ArtisanDashboardScreen({ artisanId }) {
               jobs.map((j) => (
                 <div
                   key={j.job_id}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 transition-all"
+                  className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3 transition-all"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs text-[#0E3B40]">{j.trade} Request</span>
-                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full">
-                        ₦{(j.budget || 5000).toLocaleString()}
-                      </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-[#0E3B40]">{j.trade} Request</span>
+                        <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                          j.status === 'complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                        }`}>
+                          {j.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{j.description}</p>
+                      <p className="text-[11px] text-[#16858F] font-semibold mt-0.5">📍 {j.location}</p>
                     </div>
-                    <p className="text-xs text-slate-500 truncate mt-1">{j.description}</p>
-                    <p className="text-[11px] text-[#16858F] font-semibold mt-0.5">📍 {j.location}</p>
+                    <span className="text-sm font-bold text-[#0E3B40] flex-shrink-0">
+                      ₦{(j.budget || 0).toLocaleString()}
+                    </span>
                   </div>
+
+                  {j.status === 'matched' && (
+                    <div className="flex gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        onClick={() => navigateTo('chat_screen', { job: j })}
+                        className="flex-1 py-2 bg-[#E8F5F6] text-[#16858F] text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-[#16858F] hover:text-white transition-colors"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Chat
+                      </button>
+                      <button
+                        onClick={() => navigateTo('artisan_proforma', { job: j })}
+                        className="flex-1 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-slate-200 transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Proforma
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}

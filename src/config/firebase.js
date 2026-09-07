@@ -1,6 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { getPerformance } from 'firebase/performance';
 
@@ -22,6 +24,10 @@ export const auth = getAuth(app);
 
 // Initialize default Firestore instance
 export const db = getFirestore(app);
+
+export const storage = getStorage(app);
+
+export const functions = getFunctions(app);
 
 // Initialize Analytics safely only if supported and measurementId exists
 export let analytics = null;
@@ -52,6 +58,8 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   try {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    connectStorageEmulator(storage, '127.0.0.1', 9199);
+    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   } catch (emulatorErr) {
     console.warn('Firebase emulator connection warning:', emulatorErr);
   }

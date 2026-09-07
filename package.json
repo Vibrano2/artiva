@@ -6,7 +6,15 @@
   "scripts": {
     "dev": "npx vite",
     "build": "npx vite build",
-    "preview": "npx vite preview"
+    "preview": "npx vite preview",
+    "backend:lint": "node --check functions/index.js",
+    "backend:check": "node --check functions/index.js",
+    "backend:emulators": "firebase emulators:start",
+    "backend:emulators:export": "firebase emulators:start --import ./.firebase-data --export-on-exit ./.firebase-data",
+    "backend:deploy": "firebase deploy --only firestore:rules,firestore:indexes,storage,functions",
+    "backend:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "backend:secret:set": "firebase functions:secrets:set PAYSTACK_SECRET_KEY",
+    "backend:config:set": "firebase functions:config:set"
   },
   "dependencies": {
     "axios": "^1.19.0",
@@ -22,6 +30,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "firebase-tools": "^14.17.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "vite": "^6.0.7",

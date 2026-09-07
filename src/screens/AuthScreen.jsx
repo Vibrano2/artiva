@@ -5,9 +5,9 @@ import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { ShieldCheck, ArrowRight, Check, RefreshCw } from 'lucide-react';
+import { VideoOverlay } from '../components/VideoOverlay';
 import { 
   signInWithPhoneNumber, 
-  signInWithCustomToken,
   GoogleAuthProvider, 
   OAuthProvider, 
   signInWithPopup 
@@ -30,6 +30,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [timer, setTimer] = useState(30);
+  const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [activeFormattedPhone, setActiveFormattedPhone] = useState('');
 
@@ -49,45 +50,58 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   /**
    * Handle Google Sign-In
    */
-  // Google & Apple OAuth — deferred to post-MVP (PRD §7.1).
-  // Phone OTP is the only functional auth path for launch.
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken();
-      const syncRes = await ApiService.verifyFirebaseToken(token, role);
-      const user = syncRes.user ? { ...result.user, ...syncRes.user } : result.user;
+      const syncRes = await ApiService.verifyFirebaseToken(await result.user.getIdToken(), role);
+      const user = syncRes.user;
+
       setLoading(false);
       setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Google successfully!', 'success');
-      navigateTo(role === 'artisan' ? 'artisan_dash' : 'client_dash');
+
+      if (role === 'artisan') {
+        navigateTo('artisan_dash');
+      } else {
+        navigateTo('client_dash');
+      }
     } catch (err) {
       setLoading(false);
-      setError(formatAuthError(err));
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
     }
   };
 
+  /**
+   * Handle Apple Sign-In
+   */
   const handleAppleSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
       const provider = new OAuthProvider('apple.com');
       const result = await signInWithPopup(auth, provider);
-      const token = await result.user.getIdToken();
-      const syncRes = await ApiService.verifyFirebaseToken(token, role);
-      const user = syncRes.user ? { ...result.user, ...syncRes.user } : result.user;
+      const syncRes = await ApiService.verifyFirebaseToken(await result.user.getIdToken(), role);
+      const user = syncRes.user;
+
       setLoading(false);
       setCurrentUser(user);
       setUserRole(role);
       showToast('Signed in with Apple successfully!', 'success');
-      navigateTo(role === 'artisan' ? 'artisan_dash' : 'client_dash');
+
+      if (role === 'artisan') {
+        navigateTo('artisan_dash');
+      } else {
+        navigateTo('client_dash');
+      }
     } catch (err) {
       setLoading(false);
-      setError(formatAuthError(err));
+      const friendlyMsg = formatAuthError(err);
+      setError(friendlyMsg);
     }
   };
 
@@ -153,16 +167,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
         const syncRes = await ApiService.verifyFirebaseToken(token, role);
         syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
       } else {
-        const phoneToVerify = activeFormattedPhone || formatNigerianPhoneNumber(phone).formatted || '+2348000000000';
-        const res = await ApiService.verifyPhoneOtp(phoneToVerify, otp, role);
-        syncedUser = res.user || res;
-        if (res.token && typeof res.token === 'string' && res.token.split('.').length === 3) {
-          try {
-            await signInWithCustomToken(auth, res.token);
-          } catch (tokErr) {
-            console.warn('Firebase custom token sign-in warning:', tokErr);
-          }
-        }
+        syncedUser = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
       }
 
       setLoading(false);
@@ -184,6 +189,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
   return (
     <div className="min-h-screen bg-[#0E3B40] flex flex-col justify-between relative overflow-hidden">
+      <VideoOverlay onCardShowTrigger={() => setCardVisible(true)} />
+
       <div className="relative z-30">
         <Header backTo="onboarding" />
       </div>
@@ -197,9 +204,12 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
       <main className="max-w-md mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center relative z-20">
         <div 
-          className="bg-white/55 backdrop-blur-[6px] p-11 pb-9 rounded-[18px] text-center"
+          className="bg-white/55 backdrop-blur-[6px] p-11 pb-9 rounded-[18px] text-center transition-all duration-800 ease-in-out"
           style={{
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)'
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)',
+            opacity: cardVisible ? 1 : 0,
+            pointerEvents: cardVisible ? 'auto' : 'none',
+            transform: cardVisible ? 'translateY(0)' : 'translateY(20px)'
           }}
         >
           <div className="mb-6 flex flex-col items-center">
@@ -273,8 +283,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
                   onClick={() => {
                     setError(null);
                     setConfirmationResult(null);
-                    const { formatted } = formatNigerianPhoneNumber(phone);
-                    if (formatted) setActiveFormattedPhone(formatted);
                     setStep(2);
                     showToast('Switched to Test OTP mode (Use 123456)', 'info');
                   }}

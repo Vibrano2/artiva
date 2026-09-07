@@ -92,7 +92,7 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
               Match Fee (Escrow)
             </span>
             <span className="text-sm font-bold text-[#0E3B40]">
-              ₦{(artisan.match_fee || 1500).toLocaleString()}
+              ₦{(artisan.match_fee || 500).toLocaleString()}
             </span>
           </div>
 

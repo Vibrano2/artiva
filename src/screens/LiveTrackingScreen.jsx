@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Header } from '../components/Header';
+import { ApiService } from '../services';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Phone, MessageCircle, MapPin } from 'lucide-react';
+import { MessageCircle, MapPin } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -26,7 +27,7 @@ const clientIcon = new L.Icon({
 });
 
 export function LiveTrackingScreen() {
-  const { navigateTo, activeJob } = useApp();
+  const { navigateTo, activeJob, activeArtisan } = useApp();
 
   const clientLocation = [9.0632, 7.4233]; 
   const [artisanLocation, setArtisanLocation] = useState([9.0550, 7.4100]);
@@ -113,12 +114,22 @@ export function LiveTrackingScreen() {
           <div className="h-px w-full bg-slate-100 my-1"></div>
 
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm flex-shrink-0">
-              <img src="https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&h=150&fit=crop" alt="Artisan" className="w-full h-full object-cover" />
-            </div>
+            {activeArtisan?.work_photos?.[0] ? (
+              <img
+                src={activeArtisan.work_photos[0]}
+                alt={activeArtisan.first_name}
+                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-slate-200 flex-shrink-0" />
+            )}
             <div className="flex-1">
-              <h4 className="font-bold text-[#0E3B40] text-base">Mr. Emeka</h4>
-              <p className="text-sm text-slate-500 font-medium">Verified Electrician</p>
+              <h4 className="font-bold text-[#0E3B40] text-base">
+                {activeArtisan ? `${activeArtisan.first_name} ${activeArtisan.last_name}` : 'Your Artisan'}
+              </h4>
+              <p className="text-sm text-slate-500 font-medium">
+                Verified {activeArtisan?.trade || 'Artisan'}
+              </p>
               <div className="flex items-center gap-1 mt-1 text-xs text-[#16858F] font-semibold">
                 <MapPin className="w-3.5 h-3.5" />
                 <span>Live Location Active</span>
@@ -127,20 +138,13 @@ export function LiveTrackingScreen() {
           </div>
 
           <div className="flex gap-3 mt-2">
-            <button 
-              onClick={() => navigateTo('chat_screen')}
-              className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-[14px] flex items-center justify-center gap-2 transition-all btn-press"
+            <button
+              onClick={() => navigateTo('chat_screen', { job: activeJob, artisan: activeArtisan })}
+              className="w-full py-3.5 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold rounded-[14px] flex items-center justify-center gap-2 transition-all shadow-sm btn-press"
             >
               <MessageCircle className="w-5 h-5" />
-              <span>Chat</span>
+              <span>Open Chat</span>
             </button>
-            <a 
-              href="tel:+2348031234567"
-              className="flex-1 py-3.5 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold rounded-[14px] flex items-center justify-center gap-2 transition-all shadow-sm btn-press"
-            >
-              <Phone className="w-5 h-5" />
-              <span>Call</span>
-            </a>
           </div>
 
         </div>

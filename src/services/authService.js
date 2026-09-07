@@ -1,164 +1,174 @@
-import { fetchWithAuth } from './apiConfig';
+/**
+ * authService.js
+ *
+ * Used by:
+ *   AuthScreen         → verifyFirebaseToken(token, role), verifyPhoneOtp(phone, otp, role)
+ *   ArtisanSignupScreen → verifyFirebaseToken(token, 'artisan'), signupArtisan({...})
+ */
 
-const STORAGE_KEYS = {
-  CURRENT_USER: 'artiva_current_user',
-};
+import { auth, db } from '../config/firebase';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { requireCurrentUser, withoutUndefined } from './firebaseData';
+
+const USER_KEY = 'artiva_current_user';
 
 export const AuthService = {
   /**
-   * Register a standard client user
+   * verifyFirebaseToken(token, role)
+   *
+   * Called after Firebase Auth sign-in (Google, Apple, Phone OTP confirm).
+   * Syncs Firestore users/{uid}, stores user in localStorage.
+   * Returns: { token, user: { uid, first_name, last_name, email, phone, role } }
    */
-  async register(idToken, first_name, last_name, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/register/client', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, first_name, last_name, role: 'client' })
-      });
-    } catch {
-      data = await fetchWithAuth('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, first_name, last_name, role })
-      });
-    }
-
-    const user = { ...(data.data || data.user || data), token: idToken };
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: idToken, user };
-  },
-
-  /**
-   * Register a client user (alias with object payload)
-   */
-  async registerClient({ idToken, first_name, last_name }) {
-    return this.register(idToken, first_name, last_name, 'client');
-  },
-
-  /**
-   * Register an artisan with profile, skills, banking info, and verification documents
-   */
-  async registerArtisan(artisanData) {
-    const payload = {
-      first_name: artisanData.first_name,
-      last_name: artisanData.last_name,
-      trade: artisanData.trade,
-      skills: artisanData.skills || artisanData.services || [],
-      location: typeof artisanData.location === 'object' ? artisanData.location : {
-        address: artisanData.location || artisanData.address || 'Life Camp, Abuja',
-        city: artisanData.city || 'Abuja',
-        state: artisanData.state || 'FCT',
-        lga: artisanData.lga || 'Abuja Municipal'
-      },
-      hourly_rate: Number(artisanData.hourly_rate) || 5000,
-      experience_years: Number(artisanData.experience_years) || 5,
-      nin: artisanData.nin || '',
-      bank_details: artisanData.bank_details || {
-        account_number: artisanData.account_number || '',
-        bank_code: artisanData.bank_code || '058'
-      },
-      id_document_base64: artisanData.id_document_base64 || artisanData.id_photo || '',
-      work_photos_base64: artisanData.work_photos_base64 || artisanData.work_photos || []
-    };
-
-    let res;
-    try {
-      res = await fetchWithAuth('/api/auth/register/artisan', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    } catch {
-      res = await fetchWithAuth('/api/artisans', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    }
-
-    const created = res.data || res.artisan || res;
-    return { success: true, data: created, uid: created.uid || created.id };
-  },
-
-  /**
-   * Authenticate with a Firebase ID token
-   */
-  async login(idToken, role = 'client') {
-    let data;
-    try {
-      data = await fetchWithAuth('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, role })
-      });
-    } catch {
-      data = await fetchWithAuth('/api/auth/firebase/verify', {
-        method: 'POST',
-        body: JSON.stringify({ idToken, role })
-      });
-    }
-
-    const user = { ...(data.data || data.user || data), token: idToken };
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: idToken, user };
-  },
-
   async verifyFirebaseToken(idToken, role = 'client') {
-    return this.login(idToken, role);
+    return this.syncCurrentUser(role);
   },
 
   /**
-   * Send phone OTP (PRD §7.1)
-   */
-  async sendPhoneOtp(phone) {
-    return fetchWithAuth('/api/auth/phone/send-otp', {
-      method: 'POST',
-      body: JSON.stringify({ phone })
-    });
-  },
-
-  /**
-   * Verify phone OTP and start session (PRD §7.1)
+   * verifyPhoneOtp(phone, otp, role)
+   *
+   * Fallback path when Firebase confirmationResult is unavailable.
+   * In real usage Firebase phone auth handles this client-side.
    */
   async verifyPhoneOtp(phone, otp, role = 'client') {
-    const data = await fetchWithAuth('/api/auth/phone/verify-otp', {
-      method: 'POST',
-      body: JSON.stringify({ phone, otp, role })
-    });
-
-    const user = {
-      ...(data.user || data.data || data),
-      token: data.token || data.data?.token,
-    };
-
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    return { token: data.token, user };
+    throw new Error('Phone verification must be completed through Firebase Authentication.');
   },
 
-  async resetPassword(email) {
-    return fetchWithAuth('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email })
+  /**
+   * signupArtisan(data)
+   *
+   * Called by ArtisanSignupScreen on final step submission.
+   * Creates artisanProfiles/{uid} and privateArtisans/{uid} documents.
+   * Returns: { success, artisanId, user }
+   */
+  async signupArtisan(data) {
+    const user = requireCurrentUser();
+
+    const profile = withoutUndefined({
+      uid: user.uid,
+      first_name: data.first_name || 'Artisan',
+      last_name: data.last_name || 'Professional',
+      phone: data.phone || user.phoneNumber || '',
+      trade: data.trade || 'Plumbing',
+      location:
+        typeof data.location === 'object'
+          ? data.location.address || data.location.city || 'Life Camp, Abuja'
+          : data.location || 'Life Camp, Abuja',
+      services: data.services || data.skills || ['General Maintenance'],
+      skills: data.services || data.skills || ['General Maintenance'],
+      experience_years: Number(data.experience_years) || 0,
+      hourly_rate: Number(data.hourly_rate) || 0,
+      tagline: data.tagline || '',
+      work_photos: (data.work_photos || []).filter((p) => typeof p === 'string'),
+      available: true,
+      isVerified: false,
+      no_response_flags: 0,
+      reputation_score: 0,
+      completed_jobs: 0,
+      priority_score: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
+
+    // users/{uid} — role record
+    await setDoc(
+      doc(db, 'users', user.uid),
+      withoutUndefined({
+        uid: user.uid,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        role: 'artisan',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+      { merge: true }
+    );
+
+    // artisanProfiles/{uid} — public
+    await setDoc(doc(db, 'artisanProfiles', user.uid), profile, { merge: true });
+
+    // privateArtisans/{uid} — NIN + ID doc (admin-only read)
+    await setDoc(
+      doc(db, 'privateArtisans', user.uid),
+      withoutUndefined({
+        uid: user.uid,
+        nin: data.nin || '',
+        idDocumentUrl: data.id_photo || '',
+        updatedAt: serverTimestamp(),
+      }),
+      { merge: true }
+    );
+
+    const synced = await this.syncCurrentUser('artisan', profile);
+    return { success: true, artisanId: user.uid, uid: user.uid, user: synced.user };
   },
 
+  /**
+   * registerClient({ idToken, first_name, last_name })
+   *
+   * Used by client signup path.
+   */
+  async registerClient({ idToken, first_name, last_name }) {
+    return this.syncCurrentUser('client', { first_name, last_name });
+  },
+
+  /**
+   * getMe() — re-sync current user from Firestore.
+   */
   async getMe() {
-    let res;
-    try {
-      res = await fetchWithAuth('/api/users/me');
-    } catch {
-      res = await fetchWithAuth('/api/auth/me');
-    }
-    const user = res.user || res.data || res;
-    if (user) {
-      const stored = this.getCurrentUser() || {};
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify({ ...stored, ...user }));
-    }
-    return user;
+    return this.syncCurrentUser();
   },
 
   logout() {
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(USER_KEY);
+    return signOut(auth);
   },
 
   getCurrentUser() {
-    const userStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    return userStr ? JSON.parse(userStr) : null;
-  }
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  },
+
+  /**
+   * syncCurrentUser(requestedRole, updates)
+   *
+   * Reads/writes users/{uid}, merges with Firebase Auth data, caches to localStorage.
+   * Returns: { token, user }
+   */
+  async syncCurrentUser(requestedRole = 'client', updates = {}) {
+    const user = requireCurrentUser();
+    const userRef = doc(db, 'users', user.uid);
+    const existing = await getDoc(userRef);
+    const profile = existing.exists() ? existing.data() : {};
+
+    // Preserve existing role; only upgrade to artisan/admin if explicitly requested
+    const role = profile.role || (requestedRole === 'artisan' ? 'artisan' : 'client');
+
+    const storedUser = withoutUndefined({
+      uid: user.uid,
+      first_name: updates.first_name || profile.first_name || user.displayName?.split(' ')[0] || 'User',
+      last_name:
+        updates.last_name ||
+        profile.last_name ||
+        user.displayName?.split(' ').slice(1).join(' ') ||
+        '',
+      email: user.email || profile.email || '',
+      phone: user.phoneNumber || profile.phone || '',
+      phoneNumber: user.phoneNumber || profile.phone || '',
+      role,
+      token: await user.getIdToken(),
+    });
+
+    const { token, ...profileFields } = storedUser;
+    await setDoc(
+      userRef,
+      { ...profileFields, createdAt: profile.createdAt || serverTimestamp(), updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+
+    localStorage.setItem(USER_KEY, JSON.stringify(storedUser));
+    return { token, user: storedUser };
+  },
 };

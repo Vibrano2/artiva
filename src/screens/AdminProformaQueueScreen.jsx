@@ -12,6 +12,9 @@ export function AdminProformaQueueScreen() {
   const [actionLoading, setActionLoading] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [supplierAccountNumber, setSupplierAccountNumber] = useState('');
+  const [supplierBankCode, setSupplierBankCode] = useState('');
+  const [supplierAccountName, setSupplierAccountName] = useState('');
 
   useEffect(() => {
     fetchQueue();
@@ -32,12 +35,26 @@ export function AdminProformaQueueScreen() {
   };
 
   const handleApprove = async (id) => {
+    if (!/^\d{10}$/.test(supplierAccountNumber) || !supplierBankCode.trim() || !supplierAccountName.trim()) {
+      alert('Enter the supplier account number, bank code, and account name.');
+      return;
+    }
+
     try {
       setActionLoading(id);
       await ApiService.request(`/admin/proforma/${id}/approve`, {
         method: 'POST',
-        body: JSON.stringify({ notes: 'Approved by admin' })
+        body: JSON.stringify({
+          notes: 'Approved by admin',
+          accountNumber: supplierAccountNumber,
+          bankCode: supplierBankCode.trim(),
+          accountName: supplierAccountName.trim(),
+        })
       });
+      setSelectedInvoice(null);
+      setSupplierAccountNumber('');
+      setSupplierBankCode('');
+      setSupplierAccountName('');
       fetchQueue();
     } catch (err) {
       console.error('Failed to approve invoice:', err);
@@ -147,7 +164,48 @@ export function AdminProformaQueueScreen() {
                     </div>
                   )}
 
-                  {selectedInvoice === invoice.id ? (
+                  {selectedInvoice?.id === invoice.id && selectedInvoice.action === 'approve' ? (
+                    <div className="space-y-3 animate-fade-in bg-teal-50 p-3 rounded-xl border border-teal-100">
+                      <label className="text-xs font-bold text-[#0E3B40]">Supplier Payout Details</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={supplierAccountNumber}
+                        onChange={(e) => setSupplierAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="10-digit account number"
+                        className="w-full bg-white border border-teal-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#16858F]"
+                      />
+                      <input
+                        type="text"
+                        value={supplierBankCode}
+                        onChange={(e) => setSupplierBankCode(e.target.value)}
+                        placeholder="Bank code"
+                        className="w-full bg-white border border-teal-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#16858F]"
+                      />
+                      <input
+                        type="text"
+                        value={supplierAccountName}
+                        onChange={(e) => setSupplierAccountName(e.target.value)}
+                        placeholder="Account holder name"
+                        className="w-full bg-white border border-teal-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#16858F]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApprove(invoice.id)}
+                          disabled={actionLoading === invoice.id}
+                          className="flex-1 bg-[#0E3B40] text-white font-bold text-sm py-2 rounded-xl disabled:opacity-50"
+                        >
+                          Confirm Approval
+                        </button>
+                        <button
+                          onClick={() => setSelectedInvoice(null)}
+                          className="flex-1 bg-white border border-slate-200 text-slate-700 font-bold text-sm py-2 rounded-xl"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : selectedInvoice?.id === invoice.id && selectedInvoice.action === 'reject' ? (
                     <div className="space-y-3 animate-fade-in bg-red-50 p-3 rounded-xl border border-red-100">
                       <label className="text-xs font-bold text-red-800">Reason for Rejection</label>
                       <input
@@ -180,14 +238,14 @@ export function AdminProformaQueueScreen() {
                   ) : (
                     <div className="flex gap-3 pt-2">
                       <button
-                        onClick={() => setSelectedInvoice(invoice.id)}
+                        onClick={() => setSelectedInvoice({ id: invoice.id, action: 'reject' })}
                         disabled={actionLoading === invoice.id}
                         className="flex-1 py-2.5 rounded-xl border-2 border-red-100 text-red-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 transition-colors disabled:opacity-50"
                       >
                         <XCircle className="w-4 h-4" /> Reject
                       </button>
                       <button
-                        onClick={() => handleApprove(invoice.id)}
+                        onClick={() => setSelectedInvoice({ id: invoice.id, action: 'approve' })}
                         disabled={actionLoading === invoice.id}
                         className="flex-1 py-2.5 rounded-xl bg-[#0E3B40] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#0E3B40]/90 transition-colors disabled:opacity-50"
                       >
