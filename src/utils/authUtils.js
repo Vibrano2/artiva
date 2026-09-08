@@ -52,15 +52,12 @@ export function getOrCreateRecaptchaVerifier(containerId = 'recaptcha-container'
   if (window.recaptchaVerifier) {
     try {
       window.recaptchaVerifier.clear();
-    } catch (e) {
-      console.warn('[RecaptchaVerifier] Clear warning:', e);
-    }
+    } catch {}
     window.recaptchaVerifier = null;
   }
 
   const container = document.getElementById(containerId);
   if (!container) {
-    console.error(`[RecaptchaVerifier] Container element #${containerId} not found in DOM.`);
     throw new Error(`Security verification container (#${containerId}) is missing.`);
   }
 
@@ -70,7 +67,6 @@ export function getOrCreateRecaptchaVerifier(containerId = 'recaptcha-container'
       // reCAPTCHA solved
     },
     'expired-callback': () => {
-      console.warn('[RecaptchaVerifier] reCAPTCHA session expired');
       if (typeof onExpired === 'function') onExpired();
     }
   });
@@ -80,7 +76,7 @@ export function getOrCreateRecaptchaVerifier(containerId = 'recaptcha-container'
 
 /**
  * Formats Firebase authentication errors into clear, actionable messages for end users
- * while logging structured diagnostics for developers.
+ * without exposing provider internals or credentials to end users.
  */
 export function formatAuthError(error) {
   if (!error) return 'An unexpected error occurred. Please try again.';
@@ -88,13 +84,7 @@ export function formatAuthError(error) {
   const code = error.code || '';
   const message = error.message || '';
 
-  // Log full diagnostic in development
-  console.error('[FirebaseAuth Diagnostic]', {
-    code,
-    message,
-    name: error.name,
-    rawError: error
-  });
+  if (import.meta.env.DEV) console.info('[Firebase Auth]', code || error.name || 'unknown');
 
   switch (code) {
     case 'auth/invalid-app-credential':
@@ -117,11 +107,11 @@ export function formatAuthError(error) {
 
     case 'auth/quota-exceeded':
     case 'auth/too-many-requests':
-      return 'SMS quota exceeded for today. Firebase requires a Blaze plan for unrestricted live SMS, or you can add a free test phone number in the Firebase Console.';
+      return 'SMS verification is temporarily unavailable. Please try again later.';
 
     case 'auth/error-code:-39':
     case 'auth/billing-not-enabled':
-      return 'Firebase SMS billing restriction (auth/error-code:-39): Real SMS to international carriers requires the Firebase Blaze plan or adding this phone as a "Phone number for testing" in the Firebase Console.';
+      return 'SMS verification is temporarily unavailable. Please contact support if this continues.';
 
     case 'auth/popup-closed-by-user':
       return 'Sign-in window was closed before completion. Please try again.';
@@ -130,7 +120,7 @@ export function formatAuthError(error) {
       return 'Sign-in popup was blocked by the browser. Please allow popups for this site and retry.';
 
     case 'auth/unauthorized-domain':
-      return 'This domain is not authorized in Firebase Authentication settings. Add localhost/127.0.0.1 in the Firebase Console.';
+      return 'This website is not authorized for sign-in. Please contact support.';
 
     case 'auth/operation-not-allowed':
       return 'This sign-in provider is not enabled in Firebase Authentication console.';

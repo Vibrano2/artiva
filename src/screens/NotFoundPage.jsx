@@ -2,7 +2,7 @@ import React from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useApp } from '../context/AppContext';
-import { AlertCircle, ArrowLeft, Home, Search } from 'lucide-react';
+import { AlertCircle, Home, Search } from 'lucide-react';
 
 export function NotFoundPage() {
   const { navigateTo } = useApp();

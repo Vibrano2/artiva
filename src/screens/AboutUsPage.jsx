@@ -1,12 +1,9 @@
 import React from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { useApp } from '../context/AppContext';
-import { ShieldCheck, UserCheck, Award, Heart, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Award, Heart } from 'lucide-react';
 
 export function AboutUsPage() {
-  const { navigateTo } = useApp();
-
   return (
     <div className="min-h-screen bg-[#F4F8F8] flex flex-col justify-between">
       <Navbar activeTab="about" />
@@ -46,7 +43,7 @@ export function AboutUsPage() {
                 After spending over two decades managing residential and commercial contracting projects in Abuja's premier residential estates, Gabriel experienced firsthand the recurring frustrations that plagued local service hiring: clients struggling to find verified craftspeople they could trust in their homes, and skilled artisans struggling with delayed payments and lack of formal recognition.
               </p>
               <p>
-                Artiva was created to fix this broken dynamic. By combining mandatory National Identification Number (NIN) background verification with a pay-per-job escrow payment model, Artiva guarantees that clients only pay for completed work while honest artisans receive prompt, guaranteed payouts.
+                Artiva was created to improve this process. The platform combines administrative identity and portfolio review with job-specific protected payments and webhook-confirmed payouts.
               </p>
             </div>
           </div>
@@ -57,7 +54,7 @@ export function AboutUsPage() {
                 <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
               </div>
               <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">Identity Trust</h3>
-              <p className="text-xs text-slate-500">NIN identity verification on every artisan profile.</p>
+              <p className="text-xs text-slate-500">Identity evidence and work samples reviewed before approval.</p>
             </div>
 
             <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 text-center">

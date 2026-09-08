@@ -22,6 +22,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
 dev-dist
 .firebase
 .firebase-data

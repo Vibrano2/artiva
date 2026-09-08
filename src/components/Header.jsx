@@ -1,10 +1,10 @@
 import React from 'react';
 import { ArtivaLogo } from './ArtivaLogo';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Wifi, WifiOff, LogOut, ShieldCheck, User } from 'lucide-react';
+import { ArrowLeft, LogOut } from 'lucide-react';
 
 export function Header({ title, backTo, showLogo = true }) {
-  const { currentScreen, navigateTo, userRole, currentUser, logout, isOffline, setIsOffline } = useApp();
+  const { currentScreen, navigateTo, userRole, currentUser, logout } = useApp();
 
   const canGoBack = backTo || (currentScreen !== 'onboarding' && currentScreen !== 'client_dash' && currentScreen !== 'artisan_dash');
 

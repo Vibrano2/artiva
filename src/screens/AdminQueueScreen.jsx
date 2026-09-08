@@ -3,10 +3,10 @@ import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
 import { SkeletonLoader } from '../components/SkeletonLoader';
-import { ShieldCheck, CheckCircle2, AlertTriangle, UserCheck, RefreshCw, XCircle, Flag, Image } from 'lucide-react';
+import { CheckCircle2, UserCheck, RefreshCw, XCircle, Flag, Image, FileText } from 'lucide-react';
 
 export function AdminQueueScreen() {
-  const { navigateTo, showToast } = useApp();
+  const { showToast } = useApp();
   const [queue, setQueue] = useState([]);
   const [flags, setFlags] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,13 +79,7 @@ export function AdminQueueScreen() {
           <p className="text-xs text-purple-200">
             Review and approve pending artisan profiles before they go live in Life Camp Abuja.
           </p>
-          <div className="pt-2 flex gap-2">
-            <button
-              onClick={() => navigateTo('admin_add_artisan')}
-              className="flex-1 py-2 bg-white text-purple-900 rounded-xl font-bold text-sm shadow-sm hover:bg-gray-100 transition-colors"
-            >
-              + Add Artisan Manually
-            </button>
+          <div className="pt-2 flex justify-end">
             <button
               onClick={fetchQueue}
               className="p-2 bg-purple-700 hover:bg-purple-600 text-white rounded-xl transition-colors"
@@ -104,7 +98,7 @@ export function AdminQueueScreen() {
               <h2 className="font-bold font-['Outfit'] text-sm">Non-Response Flags ({flags.length})</h2>
             </div>
             <p className="text-xs text-red-600 leading-relaxed">
-              Artisans below failed to send an in-app message within 4 hours of a match. Review and warn or remove.
+              Artisans below accumulated non-response flags. Investigate through the operations process before taking account action.
             </p>
             <div className="space-y-2 pt-1">
               {flags.map((a) => (
@@ -113,12 +107,7 @@ export function AdminQueueScreen() {
                     <p className="text-xs font-bold text-[#0E3B40]">{a.first_name} {a.last_name}</p>
                     <p className="text-[11px] text-slate-500">{a.trade} • {a.no_response_flags} flag{a.no_response_flags !== 1 ? 's' : ''}</p>
                   </div>
-                  <button
-                    onClick={() => handleApprove(a.uid)}
-                    className="px-3 py-1.5 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  <span className="text-[10px] font-bold text-red-700">Manual review required</span>
                 </div>
               ))}
             </div>
@@ -172,6 +161,13 @@ export function AdminQueueScreen() {
                 </div>
 
                 {/* Work photos */}
+                {artisan.id_document_url && (
+                  <div className="px-4 mb-3">
+                    <a href={artisan.id_document_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 p-2.5 bg-slate-100 rounded-xl text-xs font-bold text-[#0E3B40]">
+                      <FileText className="w-4 h-4" /> Review identity document
+                    </a>
+                  </div>
+                )}
                 {artisan.work_photos?.length > 0 && (
                   <div className="px-4 mb-3">
                     <button

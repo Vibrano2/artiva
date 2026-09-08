@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ApiService } from '../services';
-import { auth, db } from '../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { auth } from '../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const AppContext = createContext();
 
@@ -26,20 +26,20 @@ const pathScreens = Object.fromEntries(
 
 const screenMetadata = {
   home: {
-    title: 'Artiva — Verified Local Artisans | Life Camp Abuja',
-    description: 'Connect with verified, NIN-checked local artisans in Life Camp. Fast, protected escrow jobs.'
+    title: 'Artiva | Reviewed Local Artisan Profiles in Life Camp Abuja',
+    description: 'Connect with identity-reviewed local artisan profiles in Life Camp and coordinate protected job payments.'
   },
   find_artisans: {
-    title: 'Find Verified Artisans in Abuja | Artiva',
-    description: 'Browse background-checked plumbers, electricians, carpenters, and technicians available for hire in Abuja.'
+    title: 'Find Approved Artisan Profiles in Abuja | Artiva',
+    description: 'Browse identity-reviewed plumbers, electricians, carpenters, and technicians available for hire in Abuja.'
   },
   how_it_works: {
-    title: 'How It Works — Escrow & Verification | Artiva',
-    description: 'Learn how Artiva connects clients and artisans with secure pay-per-job escrow protection and NIN verification.'
+    title: 'How Artiva Works | Artiva',
+    description: 'Learn how Artiva connects clients and approved artisans and tracks job-specific payments.'
   },
   become_artisan: {
     title: 'Become an Artisan — Grow Your Trade Business | Artiva',
-    description: 'Join Artiva as a skilled artisan. Receive direct local jobs with guaranteed on-time escrow payouts.'
+    description: 'Join Artiva as a skilled artisan and receive direct local job opportunities with protected payments.'
   },
   jobs_board: {
     title: 'Jobs & Requests | Artiva',
@@ -55,15 +55,15 @@ const screenMetadata = {
   },
   signup: {
     title: 'Sign Up | Artiva',
-    description: 'Create an Artiva client or artisan account to get started with verified local home services.'
+    description: 'Create an Artiva client account or apply as an artisan to manage local service jobs.'
   },
   help_center: {
     title: 'Help Center & FAQs | Artiva Support',
-    description: 'Find quick answers about hiring artisans, posting jobs, escrow payments, and identity verification on Artiva.'
+    description: 'Find answers about hiring artisans, posting jobs, job payments, and identity review on Artiva.'
   },
   safety: {
     title: 'Safety & Security Safeguards | Artiva',
-    description: 'Learn about our NIN verification checks, in-app messaging safeguards, and escrow payment protections.'
+    description: 'Learn about identity evidence review, in-app messaging, and job-payment safeguards.'
   },
   terms: {
     title: 'Terms of Service | Artiva',
@@ -87,19 +87,19 @@ const screenMetadata = {
   },
   match_list: {
     title: 'Matched Artisans | Artiva',
-    description: 'Review ranked, verified artisans matched to your job request.'
+    description: 'Review ranked, approved artisan profiles matched to your job request.'
   },
   checkout: {
-    title: 'Escrow Checkout | Artiva',
-    description: 'Fund your job safely with Paystack escrow protection.'
+    title: 'Job Payment Checkout | Artiva',
+    description: 'Initialize the selected job payment through Paystack.'
   },
   chat_screen: {
     title: 'Job Chat & Messaging | Artiva',
-    description: 'Communicate directly with your assigned verified artisan.'
+    description: 'Communicate directly with the approved artisan assigned to your job.'
   },
   live_tracking: {
-    title: 'Live Artisan Tracking | Artiva',
-    description: 'Track your artisan en route to your location in real time.'
+    title: 'Artisan Arrival Status | Artiva',
+    description: 'See whether your artisan is awaiting departure, on the way, or has arrived.'
   },
   not_found: {
     title: 'Page Not Found (404) | Artiva',
@@ -110,6 +110,7 @@ const screenMetadata = {
 export function AppProvider({ children }) {
   const [currentScreen, setCurrentScreen] = useState(() => pathScreens[window.location.pathname] || 'home');
   const [currentUser, setCurrentUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
   const [userRole, setUserRole] = useState('client');
   const [activeJob, setActiveJob] = useState(null);
   const [activeArtisan, setActiveArtisan] = useState(null);
@@ -119,28 +120,24 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     ApiService.init();
-    try {
-      const storedUser = localStorage.getItem('artiva_current_user');
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setCurrentUser(parsed);
-        setUserRole(parsed.role || 'client');
-
-        // If artisan, hydrate trade/location from artisanProfiles
-        if ((parsed.role === 'artisan') && parsed.uid) {
-          getDoc(doc(db, 'artisanProfiles', parsed.uid)).then((snap) => {
-            if (snap.exists()) {
-              const profile = snap.data();
-              const hydrated = { ...parsed, trade: profile.trade, location: profile.location };
-              setCurrentUser(hydrated);
-              localStorage.setItem('artiva_current_user', JSON.stringify(hydrated));
-            }
-          }).catch(() => {});
-        }
+    return onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setCurrentUser(null);
+        setUserRole('client');
+        setAuthReady(true);
+        return;
       }
-    } catch (e) {
-      console.error(e);
-    }
+      try {
+        const user = await ApiService.getMe();
+        setCurrentUser(user);
+        setUserRole(user.role);
+      } catch {
+        setCurrentUser(null);
+        setUserRole('client');
+      } finally {
+        setAuthReady(true);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -181,15 +178,18 @@ export function AppProvider({ children }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const logout = () => {
-    localStorage.removeItem('artiva_current_user');
+  const logout = async () => {
     setCurrentUser(null);
     setUserRole('client');
     setActiveJob(null);
     setActiveArtisan(null);
     setActiveMatchId(null);
     setCurrentScreen('onboarding');
-    auth.signOut().catch(console.error);
+    try {
+      await ApiService.logout();
+    } catch {
+      // Local state is still cleared when Firebase sign-out is unavailable.
+    }
     showToast('Logged out successfully', 'info');
   };
 
@@ -233,6 +233,7 @@ export function AppProvider({ children }) {
     navigateTo,
     currentUser,
     setCurrentUser,
+    authReady,
     userRole,
     setUserRole,
     activeJob,

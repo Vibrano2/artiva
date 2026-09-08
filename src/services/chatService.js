@@ -1,88 +1,69 @@
-/**
- * chatService.js
- *
- * Used by:
- *   ChatScreen → subscribeToChat(jobId, callback) → unsubscribe fn
- *              → sendChatMessage(jobId, content, senderUid) → { id, sender_uid, content }
- *   LiveTrackingScreen → subscribeToTracking(jobId, cb), streamGpsLocation(jobId, coords)
- */
+import { encodePath, fetchWithAuth } from './apiConfig';
+import { normalizeJob } from './normalizers';
 
-import { db } from '../config/firebase';
-import {
-  addDoc, collection, doc,
-  onSnapshot, orderBy, query,
-  serverTimestamp, setDoc,
-} from 'firebase/firestore';
-import { mapMessage, requireCurrentUser } from './firebaseData';
+function messageList(response) {
+  const messages = response?.data?.messages || response?.messages || response?.data || [];
+  return Array.isArray(messages) ? messages : [];
+}
 
 export const ChatService = {
-  /**
-   * subscribeToChat(jobId, callback)
-   *
-   * Real-time Firestore listener for jobs/{jobId}/messages.
-   * Messages are ordered by createdAt asc.
-   * callback receives: Message[]  where message has { id, sender_uid, content, text, created_at }
-   *
-   * Returns unsubscribe function.
-   */
   subscribeToChat(jobId, callback) {
-    const key = String(jobId || 'default');
-    return onSnapshot(
-      query(collection(db, 'jobs', key, 'messages'), orderBy('createdAt', 'asc')),
-      (snap) => callback(snap.docs.map(mapMessage))
-    );
+    let active = true;
+    let timerId;
+    let delivered = false;
+    const poll = async () => {
+      try {
+        const messages = await this.getChatMessages(jobId);
+        if (active) callback(messages);
+        delivered = true;
+      } catch {
+        if (active && !delivered) callback([]);
+      } finally {
+        if (active) timerId = setTimeout(poll, 5_000);
+      }
+    };
+    void poll();
+    return () => {
+      active = false;
+      clearTimeout(timerId);
+    };
   },
 
-  /**
-   * getChatMessages(jobId) — one-shot fetch
-   */
   async getChatMessages(jobId) {
-    return new Promise((resolve, reject) => {
-      const unsub = this.subscribeToChat(jobId, (msgs) => { unsub(); resolve(msgs); }, reject);
-    });
+    const response = await fetchWithAuth(`/api/chat/job/${encodePath(jobId)}`);
+    return messageList(response);
   },
 
-  /**
-   * sendChatMessage(jobId, content, senderUid)
-   *
-   * Writes a message to jobs/{jobId}/messages.
-   * Returns: { id, sender_uid, content }
-   */
-  async sendChatMessage(jobId, content, senderUid) {
-    const key = String(jobId || 'default');
-    const user = requireCurrentUser();
-    const ref = await addDoc(collection(db, 'jobs', key, 'messages'), {
-      senderUid: user.uid,
-      content: String(content || '').trim(),
-      createdAt: serverTimestamp(),
+  async sendChatMessage(jobId, content) {
+    const response = await fetchWithAuth(`/api/chat/job/${encodePath(jobId)}`, {
+      method: 'POST',
+      body: JSON.stringify({ content: String(content || '').trim() }),
     });
-    return { id: ref.id, sender_uid: user.uid, content };
+    return response.data?.message || response.data || response;
   },
 
-  /**
-   * subscribeToTracking(jobId, callback)
-   *
-   * Real-time listener for jobs/{jobId}/tracking/current.
-   * Returns unsubscribe function.
-   */
   subscribeToTracking(jobId, callback) {
-    return onSnapshot(doc(db, 'jobs', jobId, 'tracking', 'current'), (snap) => {
-      if (snap.exists()) callback(snap.data());
-    });
+    let active = true;
+    let timerId;
+    const poll = async () => {
+      try {
+        const response = await fetchWithAuth(`/api/jobs/${encodePath(jobId)}`);
+        const job = normalizeJob(response.data?.job || response.job || response.data || response);
+        if (active) callback({ status: job.tracking_state || 'awaiting_departure', job });
+      } catch {
+        // Keep the last known status and retry without creating an unhandled rejection.
+      } finally {
+        if (active) timerId = setTimeout(poll, 10_000);
+      }
+    };
+    void poll();
+    return () => {
+      active = false;
+      clearTimeout(timerId);
+    };
   },
 
-  /**
-   * streamGpsLocation(jobId, { latitude, longitude, heading, status })
-   *
-   * Artisan pushes their GPS position. Merges into tracking/current.
-   */
-  async streamGpsLocation(jobId, { latitude, longitude, heading = 0, status = 'en_route' }) {
-    const user = requireCurrentUser();
-    await setDoc(
-      doc(db, 'jobs', jobId, 'tracking', 'current'),
-      { artisanId: user.uid, latitude, longitude, heading, status, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-    return { success: true };
+  async streamGpsLocation() {
+    throw new Error('Precise GPS sharing is not enabled for this release.');
   },
 };

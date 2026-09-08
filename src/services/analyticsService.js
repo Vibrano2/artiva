@@ -1,87 +1,70 @@
-/**
- * analyticsService.js
- *
- * AnalyticsService.log(eventType, metadata) — fire-and-forget client analytics
- * NotificationService.subscribe(cb)         — real-time in-app notifications
- * NotificationService.markRead(id)
- * NotificationService.markAllRead()
- */
-
-import { functions, db } from '../config/firebase';
-import { httpsCallable } from 'firebase/functions';
+import { logEvent as logAnalyticsEvent } from 'firebase/analytics';
 import {
-  collection, query, where, orderBy,
-  onSnapshot, updateDoc, doc, getDocs, writeBatch,
+  collection,
+  doc,
+  getDocs,
+  limit,
+  onSnapshot,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
-import { requireCurrentUser } from './firebaseData';
-
-const logEventFn = httpsCallable(functions, 'logAnalyticsEvent');
+import { analytics, auth, db } from '../config/firebase';
 
 export const AnalyticsService = {
-  /**
-   * log(eventType, metadata)
-   *
-   * Silently drops errors — analytics must never break the user flow.
-   */
   async log(eventType, metadata = {}) {
-    try {
-      await logEventFn({ eventType, metadata });
-    } catch {
-      // intentionally silent
-    }
+    if (!analytics || !/^[a-z][a-z0-9_]{0,39}$/.test(eventType)) return;
+    const safeMetadata = Object.fromEntries(
+      Object.entries(metadata).filter(([, value]) => ['string', 'number', 'boolean'].includes(typeof value))
+    );
+    logAnalyticsEvent(analytics, eventType, safeMetadata);
   },
 };
 
+function createdAtMillis(value) {
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?._seconds === 'number') return value._seconds * 1000;
+  return 0;
+}
+
 export const NotificationService = {
-  /**
-   * subscribe(callback)
-   *
-   * Real-time listener for notifications/{userId}.
-   * Returns unsubscribe function.
-   * callback receives: Notification[]
-   */
   subscribe(callback) {
-    const user = requireCurrentUser();
-    const q = query(
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      callback([]);
+      return () => {};
+    }
+    const notifications = query(
       collection(db, 'notifications'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('recipient_uid', '==', uid),
+      limit(100)
     );
-    return onSnapshot(q, (snap) =>
-      callback(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: d.data().createdAt?.toDate?.()?.toISOString() ?? null,
-        }))
-      )
-    );
+    return onSnapshot(notifications, (snapshot) => {
+      const values = snapshot.docs
+        .map((item) => ({ id: item.id, ...item.data() }))
+        .sort((left, right) => createdAtMillis(right.created_at) - createdAtMillis(left.created_at));
+      callback(values);
+    }, () => callback([]));
   },
 
-  /**
-   * markRead(notificationId)
-   */
   async markRead(notificationId) {
-    const user = requireCurrentUser();
     await updateDoc(doc(db, 'notifications', notificationId), { read: true });
     return { success: true };
   },
 
-  /**
-   * markAllRead()
-   */
   async markAllRead() {
-    const user = requireCurrentUser();
-    const snap = await getDocs(
-      query(
-        collection(db, 'notifications'),
-        where('userId', '==', user.uid),
-        where('read', '==', false)
-      )
-    );
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Authentication required.');
+    const snapshot = await getDocs(query(
+      collection(db, 'notifications'),
+      where('recipient_uid', '==', uid),
+      where('read', '==', false),
+      limit(100)
+    ));
     const batch = writeBatch(db);
-    snap.docs.forEach((d) => batch.update(d.ref, { read: true }));
+    snapshot.docs.forEach((item) => batch.update(item.ref, { read: true }));
     await batch.commit();
-    return { success: true, count: snap.size };
+    return { success: true, count: snapshot.size };
   },
 };

@@ -1,84 +1,51 @@
-/**
- * proformaService.js
- *
- * Used by:
- *   ArtisanProformaScreen → submitProformaInvoice({job_id, supplier_name, total_amount, invoice_document_url})
- *                           → { success, message, data, proforma }
- */
-
-import { db, functions } from '../config/firebase';
-import {
-  collection, getDocs, query, where,
-} from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { mapProforma, requireCurrentUser } from './firebaseData';
+import { encodePath, fetchWithAuth } from './apiConfig';
+import { normalizeProforma } from './normalizers';
 
 export const ProformaService = {
-  /**
-   * submitProformaInvoice(jobIdOrData, proformaData?)
-   *
-   * Accepts either:
-   *   submitProformaInvoice({ job_id, supplier_name, total_amount, invoice_document_url })
-   *   submitProformaInvoice(jobId, { supplier_name, total_amount, ... })
-   *
-   * Returns: { success, message, data: { id, job_id, supplier_name, total_amount, ... }, proforma }
-   */
-  async submitProformaInvoice(jobIdOrData, proformaData) {
-    const raw =
-      typeof jobIdOrData === 'object'
-        ? jobIdOrData
-        : { job_id: jobIdOrData, ...proformaData };
+  async uploadProformaDocument(jobId, file) {
+    if (!(file instanceof File)) throw new Error('Select an invoice file to upload.');
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetchWithAuth(`/api/proforma/upload/${encodePath(jobId)}`, {
+      method: 'POST',
+      body: formData,
+    });
+    return response.data || response;
+  },
 
-    const user = requireCurrentUser();
+  async submitProformaInvoice(jobIdOrData, proformaData) {
+    const data = typeof jobIdOrData === 'object'
+      ? jobIdOrData
+      : { job_id: jobIdOrData, ...proformaData };
+    const jobId = data.job_id || data.jobId;
+    if (!jobId) throw new Error('A valid job is required.');
+
+    let invoicePath = data.invoice_document_path;
+    if (!invoicePath && data.invoice_document instanceof File) {
+      const upload = await this.uploadProformaDocument(jobId, data.invoice_document);
+      invoicePath = upload.path;
+    }
+    if (!invoicePath) throw new Error('Upload a valid proforma document.');
 
     const payload = {
-      job_id: raw.job_id || raw.jobId || '',
-      supplier_name: raw.supplier_name || 'Local Hardware Store',
-      materials_cost: Number(raw.materials_cost) || 0,
-      labor_cost: Number(raw.labor_cost) || 0,
-      total_amount: Number(raw.total_amount) || 0,
-      items: raw.items || [],
-      receipt_url: raw.receipt_url || raw.invoice_document_url || '',
-      description: raw.description || '',
+      job_id: jobId,
+      supplier_name: String(data.supplier_name || '').trim(),
+      total_amount: Number(data.total_amount),
+      invoice_document_path: invoicePath,
+      ...(data.materials_cost !== undefined ? { materials_cost: Number(data.materials_cost) } : {}),
+      ...(Array.isArray(data.items) && data.items.length ? { items: data.items } : {}),
     };
-
-    if (!payload.job_id) throw new Error('job_id is required to submit a proforma invoice.');
-    if (payload.total_amount <= 0) throw new Error('Total amount must be greater than 0.');
-    if (!payload.receipt_url) throw new Error('Please upload a proforma invoice document.');
-
-    const fn = httpsCallable(functions, 'submitProforma');
-    const response = await fn({
-      jobId: payload.job_id,
-      supplierName: payload.supplier_name,
-      totalAmount: payload.total_amount,
-      receiptUrl: payload.receipt_url,
-      items: payload.items,
-      description: payload.description,
+    const response = await fetchWithAuth('/api/proforma/submit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
-
-    const result = { id: response.data.id, ...payload, artisanId: user.uid, status: 'pending' };
-    return {
-      success: true,
-      message: 'Proforma invoice submitted for admin review.',
-      data: result,
-      proforma: result,
-    };
+    const invoice = normalizeProforma(response.data?.invoice || response.invoice || response.data || response);
+    return { success: true, message: response.message, data: invoice, proforma: invoice };
   },
 
-  /**
-   * getJobProformas(jobId)
-   */
   async getJobProformas(jobId) {
-    const snaps = await getDocs(
-      query(collection(db, 'proformas'), where('jobId', '==', jobId))
-    );
-    return snaps.docs.map(mapProforma);
-  },
-
-  /**
-   * updateProformaStatus(proformaId, status, notes)
-   */
-  async updateProformaStatus(proformaId, status, notes = '') {
-    throw new Error('Proforma review is restricted to the admin approval workflow.');
+    const response = await fetchWithAuth(`/api/proforma/job/${encodePath(jobId)}`);
+    const invoices = response.data?.invoices || response.invoices || response.data || [];
+    return Array.isArray(invoices) ? invoices.map(normalizeProforma) : [];
   },
 };

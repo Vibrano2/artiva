@@ -5,8 +5,7 @@ import { ApiService } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { NoResponseTimer } from '../components/NoResponseTimer';
-import { ShieldCheck, MapPin, RefreshCw, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { MapPin, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export function MatchListScreen({ job }) {
   const { navigateTo, activeJob, showToast } = useApp();
@@ -84,7 +83,7 @@ export function MatchListScreen({ job }) {
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-[#0E3B40] font-['Outfit']">
-                No Verified Artisans Available Right Now
+                No Approved Artisans Available Right Now
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
                 We currently don't have an available {targetJob?.trade} artisan within your immediate radius.

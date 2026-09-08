@@ -1,31 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import { useApp } from '../context/AppContext';
 import { HeroGraphic } from '../components/HeroGraphic';
-import { ShieldCheck, Lock, MessageSquare, ArrowRight, UserCheck, Wrench, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowRight } from 'lucide-react';
 
 export function OnboardingScreen() {
   const { navigateTo, setUserRole } = useApp();
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  const slides = [
-    {
-      icon: <ShieldCheck className="w-12 h-12 text-[#FAB804]" />,
-      title: "Verified Life Camp Artisans",
-      desc: "Every artisan undergoes NIN identity verification and skill checks before entering your home."
-    },
-    {
-      icon: <Lock className="w-12 h-12 text-[#FAB804]" />,
-      title: "Protected Escrow Payments",
-      desc: "Your match fee and job funds are held securely until you confirm the job is 100% completed."
-    },
-    {
-      icon: <MessageSquare className="w-12 h-12 text-[#FAB804]" />,
-      title: "Direct In-App Communication",
-      desc: "Chat instantly with your matched artisan inside Artiva. No external phone numbers needed."
-    }
-  ];
-
   const handleStartClient = () => {
     setUserRole('client');
     navigateTo('signup');
@@ -34,11 +14,6 @@ export function OnboardingScreen() {
   const handleStartArtisan = () => {
     setUserRole('artisan');
     navigateTo('artisan_signup');
-  };
-
-  const handleStartAdmin = () => {
-    setUserRole('admin');
-    navigateTo('admin_queue');
   };
 
   return (
@@ -56,7 +31,7 @@ export function OnboardingScreen() {
             </h1>
             
             <p className="text-base md:text-lg text-slate-300 mb-10 max-w-lg leading-relaxed font-sans">
-              Artiva connects you with verified, skilled, and reliable artisans for any job — fast, secure, and hassle-free.
+              Artiva connects you with reviewed artisan profiles for local service jobs in Abuja.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-12 w-full sm:w-auto">
@@ -87,8 +62,8 @@ export function OnboardingScreen() {
               <div className="flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-[#16858F] mt-0.5 shrink-0" />
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-slate-200">Verified Artisans</span>
-                  <span className="text-xs text-slate-400">Background checked</span>
+                  <span className="text-sm font-semibold text-slate-200">Reviewed Profiles</span>
+                  <span className="text-xs text-slate-400">Identity evidence reviewed</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">

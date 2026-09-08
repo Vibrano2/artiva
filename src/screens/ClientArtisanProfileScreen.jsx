@@ -1,7 +1,7 @@
 import React from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ShieldCheck, Star, MapPin, CheckCircle, Award, ArrowRight, Clock } from 'lucide-react';
+import { ShieldCheck, Star, MapPin, CheckCircle, Award, ArrowRight } from 'lucide-react';
 
 export function ClientArtisanProfileScreen({ artisan, job }) {
   const { navigateTo, setActiveArtisan, setActiveJob } = useApp();
@@ -32,13 +32,17 @@ export function ClientArtisanProfileScreen({ artisan, job }) {
         <div className="bg-white px-4 pt-6 pb-6 border-b border-slate-100 space-y-4">
           <div className="flex gap-4">
             <div className="relative">
-              <img
-                src={artisan.work_photos?.[0] || 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=200&q=80'}
-                alt={`${artisan.first_name} ${artisan.last_name}`}
-                className="w-24 h-24 rounded-3xl object-cover border-2 border-slate-100 shadow-sm"
-              />
+              {artisan.work_photos?.[0] ? (
+                <img
+                  src={artisan.work_photos[0]}
+                  alt={`${artisan.first_name} ${artisan.last_name}`}
+                  className="w-24 h-24 rounded-3xl object-cover border-2 border-slate-100 shadow-sm"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-3xl bg-slate-200 border-2 border-slate-100" aria-hidden="true" />
+              )}
               {artisan.verified && (
-                <span className="absolute -bottom-2 -right-2 bg-[#16858F] text-white p-1 rounded-full ring-4 ring-white" title="Verified Artisan">
+                <span className="absolute -bottom-2 -right-2 bg-[#16858F] text-white p-1 rounded-full ring-4 ring-white" title="Profile approved">
                   <ShieldCheck className="w-5 h-5" />
                 </span>
               )}
@@ -64,7 +68,7 @@ export function ClientArtisanProfileScreen({ artisan, job }) {
           )}
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-2 pt-2">
             <div className="bg-slate-50 p-2.5 rounded-2xl text-center">
               <div className="flex items-center justify-center gap-1 text-amber-500 mb-1">
                 <Star className="w-4 h-4 fill-current" />
@@ -81,13 +85,6 @@ export function ClientArtisanProfileScreen({ artisan, job }) {
               <p className="text-[10px] text-slate-500 font-medium">Jobs Done</p>
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-2xl text-center">
-              <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
-                <Clock className="w-4 h-4" />
-              </div>
-              <p className="font-bold text-[#0E3B40] text-sm">&lt; 15m</p>
-              <p className="text-[10px] text-slate-500 font-medium">Response</p>
-            </div>
           </div>
         </div>
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
-import { ApiService, TradeServicesMap, LifeCampLocations } from '../services';
+import { ApiService, TradeServicesMap } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { OfflineBanner } from '../components/OfflineBanner';
 import { NoResponseTimer } from '../components/NoResponseTimer';
-import { Search, Plus, MapPin, Wrench, ShieldCheck, Zap, ChevronRight, MessageSquare, CheckCircle, Clock } from 'lucide-react';
+import { Plus, MapPin, Wrench, ChevronRight, Clock } from 'lucide-react';
 
 export function ClientDashboardScreen() {
   const { navigateTo, currentUser, showToast } = useApp();
@@ -28,7 +28,7 @@ export function ClientDashboardScreen() {
       const list = await ApiService.getArtisans(filter);
       setArtisans(Array.isArray(list) ? list : []);
 
-      const jobs = await ApiService.getJobs({ clientId: currentUser?.uid });
+      const jobs = await ApiService.getJobs();
       setActiveJobs(jobs);
 
       setLoading(false);
@@ -65,7 +65,7 @@ export function ClientDashboardScreen() {
             Hi, {currentUser?.first_name || 'there'}! 👋
           </h2>
           <p className="text-xs text-slate-200 mt-1 leading-relaxed">
-            Connect with NIN-verified local artisans with protected escrow payments.
+            Connect with identity-reviewed artisan profiles and protected job payments.
           </p>
 
           <button
@@ -92,8 +92,8 @@ export function ClientDashboardScreen() {
                   key={job.job_id} 
                   className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:border-[#16858F] transition-all"
                   onClick={() => {
-                    if (job.status === 'matched') {
-                      navigateTo('chat_screen', { job, matchId: `match_${job.job_id}_${job.matched_artisan_id}` });
+                    if (['in_progress', 'completed'].includes(job.status)) {
+                      navigateTo('chat_screen', { job });
                     } else {
                       navigateTo('match_list', { job });
                     }
@@ -103,7 +103,7 @@ export function ClientDashboardScreen() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-bold text-xs text-[#0E3B40]">{job.trade} Repair</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                        job.status === 'complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                        job.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
                       }`}>
                         {job.status}
                       </span>
@@ -131,7 +131,7 @@ export function ClientDashboardScreen() {
             <h3 className="font-bold text-[#0E3B40] text-sm font-['Outfit']">
               Select Trade Category
             </h3>
-            <span className="text-xs text-slate-400 font-medium">Verified</span>
+            <span className="text-xs text-slate-400 font-medium">Reviewed profiles</span>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
@@ -154,7 +154,7 @@ export function ClientDashboardScreen() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-[#0E3B40] text-base font-['Outfit']">
-              Verified Artisans Nearby
+              Approved Artisans Nearby
             </h3>
             <span className="text-xs font-semibold text-[#16858F]">
               {artisans.length} Available

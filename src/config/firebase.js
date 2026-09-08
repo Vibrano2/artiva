@@ -1,66 +1,43 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, connectStorageEmulator } from 'firebase/storage';
-import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getAnalytics, isSupported } from 'firebase/analytics';
-import { getPerformance } from 'firebase/performance';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDZcq5lOksvPAoG5NM1Almxt97kc4W_BIQ",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "artiva-f24a8.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "artiva-f24a8",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "artiva-f24a8.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "982788741499",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:982788741499:web:eb198aafb9f6f43adb45de",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-YX17QZB29E"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Ensure app is initialized only once (Singleton pattern)
+const requiredConfig = ['apiKey', 'authDomain', 'projectId', 'appId'];
+const missingConfig = requiredConfig.filter((key) => !firebaseConfig[key]);
+if (missingConfig.length > 0) {
+  throw new Error(`Missing Firebase configuration: ${missingConfig.join(', ')}`);
+}
+
 export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-
-// Initialize Authentication using the singleton App instance
 export const auth = getAuth(app);
-
-// Initialize default Firestore instance
 export const db = getFirestore(app);
+auth.useDeviceLanguage();
 
-export const storage = getStorage(app);
-
-export const functions = getFunctions(app);
-
-// Initialize Analytics safely only if supported and measurementId exists
 export let analytics = null;
-if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported && firebaseConfig.measurementId) {
-      analytics = getAnalytics(app);
-    }
-  }).catch(() => {});
+if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+  isSupported()
+    .then((supported) => {
+      if (supported) analytics = getAnalytics(app);
+    })
+    .catch(() => {});
 }
 
-// Initialize Performance Monitoring safely only in browser environments
-export let perf = null;
-if (typeof window !== 'undefined') {
-  try {
-    perf = getPerformance(app);
-  } catch (perfErr) {
-    // Non-fatal if browser doesn't support PerformanceObserver or blocked by extensions
-    console.debug('Firebase Performance Monitoring unavailable:', perfErr);
-  }
-}
-
-// Connect to Emulators if configured
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  if (typeof window !== 'undefined') {
-    window.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
-  }
   try {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
-    connectStorageEmulator(storage, '127.0.0.1', 9199);
-    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-  } catch (emulatorErr) {
-    console.warn('Firebase emulator connection warning:', emulatorErr);
+    connectAuthEmulator(auth, 'http://127.0.0.1:9095', { disableWarnings: true });
+    connectFirestoreEmulator(db, '127.0.0.1', 8085);
+  } catch (error) {
+    if (!String(error?.message || '').includes('already been called')) throw error;
   }
 }

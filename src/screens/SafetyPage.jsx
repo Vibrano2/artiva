@@ -5,9 +5,9 @@ import { useApp } from '../context/AppContext';
 import { LockKeyhole, MessageCircle, ShieldCheck } from 'lucide-react';
 
 const safeguards = [
-  ['Verified profiles', 'Clients see artisans only after their profile has been reviewed and approved.'],
+  ['Reviewed profiles', 'Clients see artisans only after their submitted identity evidence and profile have been reviewed and approved.'],
   ['In-app communication', 'Keep job conversations inside Artiva after payment confirmation.'],
-  ['Pay-per-job escrow', 'Payment is held for the specific job and released after completion is approved.'],
+  ['Pay-per-job protection', 'Payment is held for the specific job. Approval submits the payout, whose final status is confirmed by Paystack.'],
 ];
 
 export function SafetyPage() {

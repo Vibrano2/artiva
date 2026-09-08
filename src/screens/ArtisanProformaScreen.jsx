@@ -1,147 +1,81 @@
 import React, { useState } from 'react';
+import { AlertCircle, FileText, Send, Upload } from 'lucide-react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
-import { Calculator, FileText, Send, AlertCircle, Upload } from 'lucide-react';
 
-export function ArtisanProformaScreen({ job, matchId }) {
-  const { navigateTo, showToast } = useApp();
-  
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
+
+export function ArtisanProformaScreen({ job }) {
+  const { activeJob, navigateTo, showToast } = useApp();
+  const targetJob = job || activeJob;
   const [supplierName, setSupplierName] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
-  const [invoiceDocument, setInvoiceDocument] = useState('');
+  const [amount, setAmount] = useState('');
+  const [invoice, setInvoice] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const total = parseFloat(totalAmount) || 0;
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (total <= 0) {
-      showToast('Total cost must be greater than 0', 'error');
+  const chooseInvoice = (event) => {
+    const file = event.target.files?.[0];
+    setError('');
+    if (!file) return;
+    if (!ALLOWED_TYPES.has(file.type) || file.size > 10 * 1024 * 1024) {
+      event.target.value = '';
+      setInvoice(null);
+      setError('Upload one JPEG, PNG, or PDF file no larger than 10 MB.');
       return;
     }
-    if (!invoiceDocument) {
-      showToast('Please upload a proforma invoice document', 'error');
-      return;
-    }
+    setInvoice(file);
+  };
 
+  const submit = async (event) => {
+    event.preventDefault();
+    setError('');
     setSubmitting(true);
     try {
+      if (!targetJob?.job_id) throw new Error('A valid paid job is required.');
+      if (!(invoice instanceof File)) throw new Error('Select a valid invoice document.');
       await ApiService.submitProformaInvoice({
-        job_id: job?.job_id || matchId || 'demo_job_id',
+        job_id: targetJob.job_id,
         supplier_name: supplierName,
-        total_amount: total,
-        invoice_document_url: invoiceDocument
+        total_amount: Number(amount),
+        invoice_document: invoice,
       });
-      showToast('Proforma invoice sent to client for approval', 'success');
+      showToast('Proforma submitted for review.', 'success');
       navigateTo('artisan_dash');
-    } catch (err) {
+    } catch (submitError) {
+      setError(submitError.message || 'The proforma could not be submitted.');
+    } finally {
       setSubmitting(false);
-      showToast('Failed to submit proforma: ' + err.message, 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F8F8] pb-12">
-      <Header title="Generate Proforma" backTo="artisan_dash" />
-
-      <main className="max-w-md mx-auto px-4 py-6 space-y-6">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-          <div className="w-12 h-12 bg-[#E8F5F6] text-[#16858F] rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Calculator className="w-6 h-6" />
+    <div className="min-h-screen bg-[#F4F8F8]">
+      <Header title="Submit proforma" backTo="artisan_dash" />
+      <main className="max-w-md mx-auto px-4 py-8">
+        <form onSubmit={submit} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-card space-y-5">
+          <div>
+            <h1 className="font-extrabold text-xl text-[#0E3B40]">Supplier invoice</h1>
+            <p className="text-xs text-slate-500 mt-1">Job: {targetJob?.title || targetJob?.trade || 'No job selected'}</p>
           </div>
-          <h2 className="text-xl font-extrabold text-[#0E3B40] font-['Outfit']">
-            Job Estimate
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Upload the official supplier proforma invoice. The platform will pay the supplier directly from escrow.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-[#0E3B40] mb-1.5 uppercase tracking-wider">
-                Supplier Name
-              </label>
-              <input
-                type="text"
-                required
-                value={supplierName}
-                onChange={(e) => setSupplierName(e.target.value)}
-                placeholder="e.g. Lekki Plumbing Supplies"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-1 focus:ring-[#16858F] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0E3B40] mb-1.5 uppercase tracking-wider">
-                Total Amount (₦)
-              </label>
-              <input
-                type="number"
-                min="0"
-                required
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                placeholder="e.g. 15000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-1 focus:ring-[#16858F] focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0E3B40] mb-2 uppercase tracking-wider">Upload Proforma Document</label>
-              <label className="h-28 rounded-2xl border-2 border-dashed border-[#16858F] flex flex-col items-center justify-center p-2 text-center text-[#16858F] bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
-                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => setInvoiceDocument(reader.result);
-                    reader.readAsDataURL(file);
-                  }
-                }} />
-                {invoiceDocument ? (
-                  <div className="flex flex-col items-center">
-                    <FileText className="w-6 h-6 mb-1" />
-                    <span className="text-xs font-bold">Document Uploaded</span>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-6 h-6 mb-1" />
-                    <span className="text-xs font-bold">Tap to Upload Invoice</span>
-                  </>
-                )}
-              </label>
-            </div>
-          </div>
-
-          <div className="bg-slate-100 p-4 rounded-3xl border border-slate-200 space-y-2">
-            <div className="flex justify-between items-center font-extrabold text-[#0E3B40] text-lg">
-              <span>Total Estimate</span>
-              <span>₦{total.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-            <p className="text-[10px] text-amber-800 leading-relaxed font-medium">
-              Submitting this proforma commits you to completing the job for this price if accepted. The admin will verify the supplier before payout.
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting || total <= 0 || !invoiceDocument}
-            className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target disabled:opacity-50"
-          >
-            {submitting ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>Send to Client</span>
-                <Send className="w-4 h-4" />
-              </>
-            )}
+          <label className="block text-xs font-bold text-[#0E3B40]">
+            Supplier name
+            <input value={supplierName} onChange={(event) => setSupplierName(event.target.value.slice(0, 120))} required minLength={2} maxLength={120} className="mt-2 w-full p-3 border border-slate-200 rounded-xl font-normal" />
+          </label>
+          <label className="block text-xs font-bold text-[#0E3B40]">
+            Total amount (NGN)
+            <input type="number" min="1" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required className="mt-2 w-full p-3 border border-slate-200 rounded-xl font-normal" />
+          </label>
+          <label className="block p-5 border-2 border-dashed border-[#16858F] rounded-2xl text-center text-[#16858F] cursor-pointer">
+            <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={chooseInvoice} className="hidden" />
+            {invoice ? <FileText className="w-6 h-6 mx-auto mb-1" /> : <Upload className="w-6 h-6 mx-auto mb-1" />}
+            <span className="text-xs font-bold">{invoice?.name || 'Choose invoice (JPEG, PNG, or PDF)'}</span>
+          </label>
+          <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl flex gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> An administrator must verify the invoice and independently vetted Paystack recipient before payout.</p>
+          {error && <p role="alert" className="p-3 rounded-xl bg-red-50 text-red-800 text-xs font-semibold">{error}</p>}
+          <button type="submit" disabled={submitting || !targetJob?.job_id || !invoice} className="w-full py-4 bg-[#16858F] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50">
+            <Send className="w-4 h-4" /> {submitting ? 'Submitting…' : 'Submit for review'}
           </button>
         </form>
       </main>

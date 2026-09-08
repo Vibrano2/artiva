@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Footer } from '../components/Footer';
 import { Navbar } from '../components/Navbar';
 import { useApp } from '../context/AppContext';
-import { ArrowRight, ChevronDown, CircleHelp, Mail, Phone, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ChevronDown, CircleHelp, Mail, ShieldCheck } from 'lucide-react';
 
 const helpTopics = [
   {
@@ -15,25 +15,25 @@ const helpTopics = [
     id: 'escrow',
     title: 'How pay-per-job escrow protection works',
     description: 'Learn when payments are held and how they are released after completion.',
-    details: 'When you confirm a match, your job payment is held securely in escrow via Paystack. Funds are not transferred to the artisan until the job is completed on-site and you tap "Confirm & Release Payment" in your client dashboard.'
+    details: 'When you confirm a match, the payment is associated with that job. After the job is completed on-site and you confirm completion, Artiva submits the payout and records its final status from Paystack.'
   },
   {
     id: 'verification',
-    title: 'Artisan verification & background checks',
+    title: 'Artisan identity and profile review',
     description: 'Understand the identity and profile checks required to join Artiva.',
-    details: 'Every artisan on Artiva undergoes strict verification including government-issued ID validation (NIN, Driver License, or Voter Card), real-world trade portfolio review, and admin screening before being marked active for hire.'
+    details: 'Before an artisan profile is made available, an administrator reviews the submitted identity document, NIN details, payout-account setup, and work samples. This is an identity and profile review, not a criminal background check.'
   },
   {
     id: 'tracking',
-    title: 'Live artisan location tracking',
-    description: 'How real-time location monitoring works when an artisan is on the way.',
-    details: 'Once an artisan confirms they are en route to your residence, you can open the active job chat and tap "Track" to monitor their live GPS route and estimated arrival time on the interactive map.'
+    title: 'Artisan arrival status',
+    description: 'How journey and arrival updates work when an artisan is on the way.',
+    details: 'The artisan can mark the journey as started and then mark arrival. Artiva displays these status updates but does not collect or show precise GPS location in this release.'
   },
   {
     id: 'issues',
     title: 'Disputes, cancellations & refunds',
     description: 'What happens if a job cannot be completed or needs resolution.',
-    details: 'If an artisan cannot complete the job or there is a disagreement over scope, our support team steps in. Because funds are securely held in escrow, your payment is protected and can be refunded back to your source account upon investigation.'
+    details: 'If an artisan cannot complete the job or there is a disagreement over scope, contact support before confirming completion. An eligible refund can be submitted after investigation, and its final status is confirmed by Paystack.'
   }
 ];
 
@@ -100,7 +100,7 @@ export function HelpCenterPage() {
           <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h4 className="font-bold text-[#0E3B40] text-sm">Still have questions?</h4>
-              <p className="text-xs text-slate-500">Our customer support team is available 7 days a week.</p>
+              <p className="text-xs text-slate-500">Contact the support team by email for assistance.</p>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <a
@@ -109,13 +109,6 @@ export function HelpCenterPage() {
               >
                 <Mail className="w-4 h-4 text-[#16858F]" />
                 <span>Email Us</span>
-              </a>
-              <a
-                href="tel:+234800278482"
-                className="flex-1 sm:flex-none px-4 py-2.5 bg-[#16858F] hover:bg-[#0E5C63] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Call Support</span>
               </a>
             </div>
           </div>

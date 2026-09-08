@@ -10,13 +10,17 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
     >
       <div className="flex items-start gap-3.5">
         <div className="relative">
-          <img
-            src={artisan.work_photos[0] || 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=200&q=80'}
-            alt={`${artisan.first_name} ${artisan.last_name}`}
-            className="w-14 h-14 rounded-2xl object-cover border border-slate-100 shadow-sm"
-          />
+          {artisan.work_photos?.[0] ? (
+            <img
+              src={artisan.work_photos[0]}
+              alt={`${artisan.first_name} ${artisan.last_name}`}
+              className="w-14 h-14 rounded-2xl object-cover border border-slate-100 shadow-sm"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-slate-200 border border-slate-100" aria-hidden="true" />
+          )}
           {artisan.verified && (
-            <span className="absolute -bottom-1 -right-1 bg-[#16858F] text-white p-0.5 rounded-full ring-2 ring-white" title="Verified Artisan">
+            <span className="absolute -bottom-1 -right-1 bg-[#16858F] text-white p-0.5 rounded-full ring-2 ring-white" title="Profile approved">
               <ShieldCheck className="w-3.5 h-3.5" />
             </span>
           )}
@@ -42,7 +46,7 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
             <span className="flex items-center gap-0.5 text-slate-600 font-medium">
               <MapPin className="w-3.5 h-3.5 text-[#16858F]" />
-              {artisan.distance_km} km away
+              {Number.isFinite(artisan.distance_km) ? `${artisan.distance_km} km away` : 'Service area'}
             </span>
             <span>•</span>
             <span className="truncate">{artisan.location}</span>
@@ -51,16 +55,16 @@ export function ArtisanCard({ artisan, onSelect, selected = false, showSelectBut
       </div>
 
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-xs">
-        {artisan.nin_verified && (
+        {artisan.verified && (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-semibold text-[11px]">
             <CheckCircle className="w-3 h-3 text-emerald-600" />
-            NIN Verified
+            Identity Reviewed
           </span>
         )}
 
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-medium text-[11px]">
           <Award className="w-3 h-3 text-[#16858F]" />
-          {artisan.completed_jobs} Jobs Completed
+          {Number(artisan.completed_jobs || 0)} Jobs Completed
         </span>
       </div>
 

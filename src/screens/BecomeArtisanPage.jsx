@@ -3,7 +3,7 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useApp } from '../context/AppContext';
 import { ALL_TRADES } from '../services';
-import { Wrench, ShieldCheck, DollarSign, Award, ArrowRight, CheckCircle2, FileText, Camera } from 'lucide-react';
+import { Wrench, ArrowRight, CheckCircle2, FileText, Camera } from 'lucide-react';
 
 export function BecomeArtisanPage() {
   const { navigateTo, setUserRole } = useApp();
@@ -18,7 +18,7 @@ export function BecomeArtisanPage() {
   const requirements = [
 
     { icon: <FileText className="w-5 h-5 text-[#16858F]" />, title: 'Valid Photo ID', desc: 'Government driver license, voter card, or international passport.' },
-    { icon: <Camera className="w-5 h-5 text-[#16858F]" />, title: 'Portfolio Photos', desc: '2-3 photos showing your recent completed craft projects.' }
+    { icon: <Camera className="w-5 h-5 text-[#16858F]" />, title: 'Portfolio Photos', desc: '3-5 photos showing your recent completed craft projects.' }
   ];
 
   const handleStartSignup = () => {
@@ -37,7 +37,7 @@ export function BecomeArtisanPage() {
               Get More Jobs. Build Your Reputation. Grow Your Business.
             </h1>
             <p className="text-xs sm:text-base text-slate-200 max-w-xl mx-auto leading-relaxed">
-              Join Abuja's trusted network of verified artisans. Receive direct job requests with guaranteed escrow payouts.
+              Join Abuja's network of reviewed artisan profiles and receive direct job opportunities with protected payments.
             </p>
 
             <div className="pt-4">

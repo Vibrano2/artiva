@@ -1,27 +1,40 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const required = [
+    'VITE_FIREBASE_API_KEY',
+    'VITE_FIREBASE_AUTH_DOMAIN',
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_APP_ID',
+  ]
+  const missing = required.filter((key) => !env[key]?.trim())
+  if (missing.length) {
+    throw new Error(`Missing required frontend environment variables: ${missing.join(', ')}`)
+  }
+
+  return {
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       devOptions: {
-        enabled: true
+        enabled: false
       },
       manifest: {
         name: 'Artiva',
         short_name: 'Artiva',
-        description: 'Verified. Fast. Protected. Book top artisans securely.',
+        description: 'Find reviewed artisan profiles and manage local service jobs.',
         theme_color: '#16858F',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
-            src: '/logo/SVG/Artiva-lo.svg',
+            src: '/logo.svg',
             sizes: 'any',
             type: 'image/svg+xml'
           }
@@ -39,15 +52,18 @@ export default defineConfig({
     host: true
   },
   build: {
-    emptyOutDir: false,
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          'firebase-auth': ['firebase/app', 'firebase/auth'],
+          'firebase-data': ['firebase/firestore'],
+          'firebase-analytics': ['firebase/analytics'],
           'ui-vendor': ['lucide-react']
         }
       }
     }
+  }
   }
 })

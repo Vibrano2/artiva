@@ -34,7 +34,7 @@ export function VideoOverlay({ onCardShowTrigger }) {
 
       try {
         ctx.drawImage(video, 0, 0, WORK_W, WORK_H);
-      } catch (e) {}
+      } catch {}
     };
 
     const handleLoadedData = () => {

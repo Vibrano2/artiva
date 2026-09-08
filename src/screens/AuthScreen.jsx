@@ -25,6 +25,8 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [authMode, setAuthMode] = useState(initialMode);
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [otp, setOtp] = useState('');
   const [ndprConsent, setNdprConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,32 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
   const [timer, setTimer] = useState(30);
   const [cardVisible, setCardVisible] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [activeFormattedPhone, setActiveFormattedPhone] = useState('');
+
+  const completeSignIn = (user) => {
+    const effectiveRole = user?.role;
+    if (!['client', 'artisan', 'admin'].includes(effectiveRole)) {
+      throw new Error('Your account role could not be verified.');
+    }
+    setCurrentUser(user);
+    setUserRole(effectiveRole);
+    navigateTo(effectiveRole === 'admin' ? 'admin_dash' : `${effectiveRole}_dash`);
+  };
+
+  const syncFirebaseUser = async (firebaseUser) => {
+    const token = await firebaseUser.getIdToken();
+    if (authMode !== 'signup') return ApiService.verifyFirebaseToken(token, role);
+    if (role !== 'client') {
+      throw new Error('Artisan accounts must be created through the artisan application.');
+    }
+    if (!firstName.trim() || !lastName.trim()) {
+      throw new Error('Enter your first and last name before creating an account.');
+    }
+    return ApiService.registerClient({
+      idToken: token,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+    });
+  };
 
   const startTimer = () => {
     setTimer(30);
@@ -56,19 +83,12 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const syncRes = await ApiService.verifyFirebaseToken(await result.user.getIdToken(), role);
+      const syncRes = await syncFirebaseUser(result.user);
       const user = syncRes.user;
 
+      completeSignIn(user);
       setLoading(false);
-      setCurrentUser(user);
-      setUserRole(role);
       showToast('Signed in with Google successfully!', 'success');
-
-      if (role === 'artisan') {
-        navigateTo('artisan_dash');
-      } else {
-        navigateTo('client_dash');
-      }
     } catch (err) {
       setLoading(false);
       const friendlyMsg = formatAuthError(err);
@@ -85,19 +105,12 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     try {
       const provider = new OAuthProvider('apple.com');
       const result = await signInWithPopup(auth, provider);
-      const syncRes = await ApiService.verifyFirebaseToken(await result.user.getIdToken(), role);
+      const syncRes = await syncFirebaseUser(result.user);
       const user = syncRes.user;
 
+      completeSignIn(user);
       setLoading(false);
-      setCurrentUser(user);
-      setUserRole(role);
       showToast('Signed in with Apple successfully!', 'success');
-
-      if (role === 'artisan') {
-        navigateTo('artisan_dash');
-      } else {
-        navigateTo('client_dash');
-      }
     } catch (err) {
       setLoading(false);
       const friendlyMsg = formatAuthError(err);
@@ -117,14 +130,16 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       setError('Please enter a valid 10 or 11-digit Nigerian phone number (e.g. 0803 123 4567).');
       return;
     }
+    if (authMode === 'signup' && (!firstName.trim() || !lastName.trim())) {
+      setError('Enter your first and last name before creating an account.');
+      return;
+    }
     if (!ndprConsent) {
       setError('You must accept the Terms and Privacy Policy to proceed.');
       return;
     }
 
     setLoading(true);
-    setActiveFormattedPhone(formatted);
-
     try {
       const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
         setError('Security check expired. Please try sending OTP again.');
@@ -139,7 +154,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
       showToast(`SMS OTP sent from Firebase to ${formatted}`, 'success');
       startTimer();
     } catch (err) {
-      console.error('[Firebase Phone Auth] Real SMS OTP dispatch error:', err);
       setLoading(false);
       const friendlyMsg = formatAuthError(err);
       setError(friendlyMsg);
@@ -159,27 +173,16 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
     setLoading(true);
 
     try {
-      let syncedUser;
-      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
-        const result = await confirmationResult.confirm(otp);
-        const user = result.user;
-        const token = await user.getIdToken();
-        const syncRes = await ApiService.verifyFirebaseToken(token, role);
-        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
-      } else {
-        syncedUser = await ApiService.verifyPhoneOtp(activeFormattedPhone, otp, role);
+      if (!confirmationResult || typeof confirmationResult.confirm !== 'function') {
+        throw new Error('Request a new Firebase verification code before continuing.');
       }
+      const result = await confirmationResult.confirm(otp);
+      const syncRes = await syncFirebaseUser(result.user);
+      const syncedUser = syncRes.user;
 
+      completeSignIn(syncedUser);
       setLoading(false);
-      setCurrentUser(syncedUser);
-      setUserRole(role);
       showToast('Authentication successful!', 'success');
-
-      if (role === 'artisan') {
-        navigateTo('artisan_dash');
-      } else {
-        navigateTo('client_dash');
-      }
     } catch (err) {
       setLoading(false);
       const friendlyMsg = formatAuthError(err);
@@ -275,27 +278,41 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
           )}
 
           {error && (
-            <div className="mb-4 p-3.5 bg-red-50/90 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left shadow-sm space-y-2.5">
+            <div className="mb-4 p-3.5 bg-red-50/90 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left shadow-sm">
               <p>{error}</p>
-              {step === 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setConfirmationResult(null);
-                    setStep(2);
-                    showToast('Switched to Test OTP mode (Use 123456)', 'info');
-                  }}
-                  className="w-full py-1.5 px-3 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold rounded-lg text-xs transition-all text-center block shadow-sm active:scale-95"
-                >
-                  ⚡ Skip & Continue With Test OTP (123456)
-                </button>
-              )}
             </div>
           )}
 
           {step === 1 ? (
             <form onSubmit={handleSendOtp} className="space-y-[18px]">
+              {authMode === 'signup' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                  <label className="text-[13px] font-semibold text-[#444]">
+                    First name
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
+                      maxLength={80}
+                      className="mt-1.5 w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
+                      required
+                    />
+                  </label>
+                  <label className="text-[13px] font-semibold text-[#444]">
+                    Last name
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
+                      maxLength={80}
+                      className="mt-1.5 w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
+                      required
+                    />
+                  </label>
+                </div>
+              )}
               <div className="text-left">
                 <label className="block text-[13px] font-semibold text-[#444] mb-1.5">
                   Nigerian Phone Number
@@ -347,20 +364,6 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
             </form>
           ) : (
             <form onSubmit={handleVerifyOtp} className="space-y-[18px]">
-              <div className="p-3 bg-teal-50 border border-teal-200/80 rounded-xl text-left flex items-center justify-between shadow-sm">
-                <div>
-                  <p className="text-[12px] font-bold text-[#0E5C63]">Testing / Demo Mode</p>
-                  <p className="text-[11px] text-gray-600">Verification Code: <strong className="text-[#16858F] font-mono text-xs">123456</strong></p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtp('123456')}
-                  className="px-2.5 py-1 bg-[#16858F] hover:bg-[#0E5C63] text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
-                >
-                  Auto-Fill
-                </button>
-              </div>
-
               <div className="text-left">
                 <label className="block text-[13px] font-semibold text-[#444] mb-1.5 text-center">
                   Enter 6-Digit OTP
@@ -418,7 +421,7 @@ export function AuthScreen({ role = 'client', initialMode = 'signup' }) {
 
       <footer className="p-4 text-center text-xs text-[#8a8a8a] flex items-center justify-center gap-1.5 relative z-20 mix-blend-multiply">
         <ShieldCheck className="w-4 h-4" />
-        <span>End-to-End Escrow Protection • Life Camp, Abuja</span>
+        <span>Protected job payments • Life Camp, Abuja</span>
       </footer>
     </div>
   );

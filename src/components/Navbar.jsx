@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArtivaLogo } from './ArtivaLogo';
 import { useApp } from '../context/AppContext';
-import { Menu, X, Smartphone } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 export function Navbar({ activeTab = 'home' }) {
   const { navigateTo, currentUser, logout, userRole } = useApp();

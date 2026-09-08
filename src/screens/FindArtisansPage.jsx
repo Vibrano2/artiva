@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { ApiService, TradeServicesMap, LifeCampLocations } from '../services';
 import { ArtisanCard } from '../components/ArtisanCard';
 import { SkeletonLoader } from '../components/SkeletonLoader';
-import { Search, MapPin, Filter, Wrench, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Search, MapPin, Wrench } from 'lucide-react';
 
 export function FindArtisansPage() {
   const { navigateTo } = useApp();
@@ -39,9 +39,8 @@ export function FindArtisansPage() {
 
       setArtisans(list);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setLoading(false);
-      console.error(err);
     }
   };
 
@@ -60,7 +59,7 @@ export function FindArtisansPage() {
               Find a trusted artisan for your job.
             </h1>
             <p className="text-xs sm:text-sm text-slate-200 max-w-xl mx-auto">
-              Search verified local plumbers, electricians, and technicians in Life Camp by trade and area.
+              Search approved local plumber, electrician, and technician profiles in Life Camp by trade and area.
             </p>
           </div>
         </section>
@@ -133,9 +132,9 @@ export function FindArtisansPage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#0E3B40] font-['Outfit']">
-              Verified Artisans ({artisans.length})
+              Approved Artisans ({artisans.length})
             </h2>
-            <span className="text-xs text-slate-400 font-medium">NIN Identity Checked</span>
+            <span className="text-xs text-slate-400 font-medium">Profile Review Required</span>
           </div>
 
           {loading ? (

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { useApp } from '../context/AppContext';
-import { ShieldCheck, Lock, CheckCircle2, UserCheck, Wrench, ArrowRight } from 'lucide-react';
+import { Lock, ArrowRight } from 'lucide-react';
 
 export function HowItWorksPage() {
   const { navigateTo } = useApp();
@@ -15,7 +15,7 @@ export function HowItWorksPage() {
     { num: 4, title: 'Payment Secured via Escrow', desc: 'Your match fee is held in escrow. Funds remain locked until work completes.' },
     { num: 5, title: 'Artisan Completes Work', desc: 'Artisan arrives on site and performs the service.' },
     { num: 6, title: 'Client Approves Completion', desc: 'Inspect the finished work in your home or premises and tap Confirm.' },
-    { num: 7, title: 'Payment Released', desc: 'Funds are safely transferred to the artisan upon your confirmation.' },
+    { num: 7, title: 'Payout Submitted', desc: 'Artiva submits the payout after confirmation and records the final Paystack status.' },
   ];
 
   const artisanSteps = [
@@ -25,7 +25,7 @@ export function HowItWorksPage() {
     { num: 4, title: 'Receive Job Opportunities', desc: 'Get matched directly with client job requests in your local area.' },
     { num: 5, title: 'Accept & Agree on Job', desc: 'Confirm availability and communicate with the client.' },
     { num: 6, title: 'Complete the Work', desc: 'Deliver quality craftsmanship on site.' },
-    { num: 7, title: 'Receive Guaranteed Payout', desc: 'Once the client confirms completion, funds are released directly to your account.' },
+    { num: 7, title: 'Payout Processing', desc: 'Once the client confirms completion, Artiva submits the payout and confirms its final status through Paystack.' },
   ];
 
   return (
@@ -97,12 +97,12 @@ export function HowItWorksPage() {
                 <h3 className="text-lg font-bold text-[#0E3B40] font-['Outfit']">
                   Pay-Per-Job Escrow Protection
                 </h3>
-                <p className="text-xs text-slate-500">No deposit risk. No payment disputes.</p>
+                <p className="text-xs text-slate-500">Payment state is tracked for each job.</p>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              When you hire an artisan on Artiva, your payment is reserved specifically for that individual job order. Funds are held in a secure escrow account and are only transferred to the artisan after you inspect and approve the completed job in your app.
+              When you hire an artisan on Artiva, the payment is associated with that individual job. After you inspect and approve the completed work, Artiva submits the payout and records its final status from Paystack.
             </p>
           </div>
 

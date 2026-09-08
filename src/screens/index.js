@@ -29,5 +29,4 @@ export { ArtisanProformaScreen } from './ArtisanProformaScreen';
 
 export { AdminQueueScreen } from './AdminQueueScreen';
 export { AdminDashboardScreen } from './AdminDashboardScreen';
-export { AdminAddArtisanScreen } from './AdminAddArtisanScreen';
 export { AdminProformaQueueScreen } from './AdminProformaQueueScreen';

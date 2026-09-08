@@ -27,7 +27,6 @@ import {
   ArtisanDashboardScreen,
   AdminQueueScreen,
   AdminDashboardScreen,
-  AdminAddArtisanScreen,
   AdminProformaQueueScreen,
   ClientArtisanProfileScreen,
   ArtisanProformaScreen,
@@ -41,18 +40,33 @@ const PROTECTED_SCREENS = new Set([
   'checkout',
   'complete_rating',
   'artisan_pending',
+  'artisan_proforma',
   'admin_queue',
+  'admin_dash',
   'admin_proforma',
   'chat_screen',
   'live_tracking',
 ]);
 
 export function AppContent() {
-  const { currentScreen, userRole, currentUser, activeJob, activeArtisan } = useApp();
+  const { currentScreen, userRole, currentUser, activeJob, activeArtisan, authReady } = useApp();
 
   const renderScreen = () => {
+    if (!authReady) {
+      return <div className="min-h-screen bg-[#F4F8F8] flex items-center justify-center"><div className="w-10 h-10 border-4 border-[#16858F] border-t-transparent rounded-full animate-spin" /></div>;
+    }
     if (PROTECTED_SCREENS.has(currentScreen) && !currentUser) {
       return <LoginPage />;
+    }
+    if (currentScreen.startsWith('admin_') && currentUser?.role !== 'admin') {
+      return currentUser?.role === 'artisan' ? <ArtisanDashboardScreen /> : <LoginPage />;
+    }
+    if (currentScreen.startsWith('artisan_') && !['artisan', 'admin'].includes(currentUser?.role)) {
+      return currentUser ? <ClientDashboardScreen /> : <LoginPage />;
+    }
+    if (['client_dash', 'post_job', 'match_list', 'checkout', 'complete_rating'].includes(currentScreen)
+      && !['client', 'admin'].includes(currentUser?.role)) {
+      return currentUser ? <ArtisanDashboardScreen /> : <LoginPage />;
     }
 
     switch (currentScreen) {
@@ -110,12 +124,10 @@ export function AppContent() {
       case 'artisan_dash':
         return <ArtisanDashboardScreen />;
       case 'artisan_proforma':
-        return <ArtisanProformaScreen job={activeJob} matchId={`match_${activeJob?.job_id}_${currentUser?.uid}`} />;
+        return <ArtisanProformaScreen job={activeJob} />;
 
       case 'admin_queue':
         return <AdminQueueScreen />;
-      case 'admin_add_artisan':
-        return <AdminAddArtisanScreen />;
       case 'admin_dash':
         return <AdminDashboardScreen />;
       case 'admin_proforma':

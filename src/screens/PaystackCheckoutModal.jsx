@@ -1,217 +1,101 @@
 import React, { useState } from 'react';
+import { AlertCircle, Lock, ShieldCheck } from 'lucide-react';
 import { Header } from '../components/Header';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
-import { OfflineBanner } from '../components/OfflineBanner';
-import { Lock, ShieldCheck, CreditCard, AlertCircle, RefreshCw, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export function PaystackCheckoutModal({ job, artisan }) {
-  const { navigateTo, activeJob, activeArtisan, showToast } = useApp();
+  const {
+    activeJob,
+    activeArtisan,
+    activeMatchId,
+    setActiveMatchId,
+  } = useApp();
   const targetJob = job || activeJob;
   const targetArtisan = artisan || activeArtisan;
-
-  const [paymentState, setPaymentState] = useState('summary');
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [receiptEmail, setReceiptEmail] = useState('');
+  const [error, setError] = useState('');
 
-  const matchFee = targetArtisan?.match_fee || 500;
+  const total = Number(targetJob?.budget || 0) + 500;
 
-  const handleInitializePaystack = async () => {
-    setPaymentState('processing');
+  const startPayment = async () => {
     setLoading(true);
-    setErrorMsg(null);
-
+    setError('');
     try {
-      if (targetJob?.job_id && targetArtisan?.uid) {
-        try {
-          await ApiService.selectArtisan(targetJob.job_id, targetArtisan.uid);
-        } catch (selErr) {
-          console.warn('Select artisan notice:', selErr);
-        }
+      if (!targetJob?.job_id || !targetArtisan?.uid) {
+        throw new Error('Choose a valid job and artisan before payment.');
       }
 
-      const payment = await ApiService.initializePayment(targetJob?.job_id, receiptEmail);
-      window.location.assign(payment.data.authorization_url);
+      let matchId = activeMatchId || targetArtisan.match_id;
+      if (!matchId || targetArtisan.match_status !== 'accepted') {
+        const selection = await ApiService.selectArtisan(targetJob.job_id, targetArtisan.uid);
+        matchId = selection.match_id;
+      }
+      if (!matchId) throw new Error('The server did not return a valid match.');
 
-    } catch (err) {
+      setActiveMatchId(matchId);
+      const payment = await ApiService.initializePayment(matchId);
+      window.location.assign(payment.data.authorization_url);
+    } catch (paymentError) {
+      setError(paymentError.message || 'Payment could not be initialized.');
       setLoading(false);
-      setPaymentState('failed');
-      setErrorMsg(err.message);
     }
   };
 
-  const handleSimulatePaymentFailure = () => {
-    setPaymentState('processing');
-    setTimeout(() => {
-      setPaymentState('failed');
-      setErrorMsg('Transaction declined by issuer Bank (Intermittent network timeout). Please retry.');
-    }, 1000);
-  };
-
-  const handleOpenChat = () => {
-    navigateTo('chat_screen', { job: targetJob, artisan: targetArtisan });
-  };
-
   return (
-    <div className="min-h-screen bg-[#F4F8F8] flex flex-col justify-between">
-      <Header title="Escrow Payment Checkout" backTo="match_list" />
-      <OfflineBanner onRetry={handleInitializePaystack} />
-
-      <main className="max-w-md mx-auto w-full px-4 py-6 flex-1 flex flex-col justify-center">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-card animate-fade-in space-y-5">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-[#16858F]" />
-              <span className="text-xs font-bold text-[#0E3B40] uppercase tracking-wider">
-                Paystack Escrow Protection
-              </span>
-            </div>
-            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Encrypted 256-Bit
-            </span>
+    <div className="min-h-screen bg-[#F4F8F8]">
+      <Header title="Secure payment" backTo="match_list" />
+      <OfflineBanner onRetry={startPayment} />
+      <main className="max-w-md mx-auto px-4 py-10">
+        <section className="bg-white p-6 rounded-3xl border border-slate-200 shadow-card space-y-5">
+          <div className="flex items-center gap-2 text-[#0E3B40]">
+            <ShieldCheck className="w-5 h-5 text-[#16858F]" />
+            <h1 className="font-extrabold">Paystack escrow checkout</h1>
           </div>
 
-          {paymentState === 'summary' && (
-            <div className="space-y-5">
-              <div className="bg-[#F4F8F8] p-4 rounded-2xl border border-slate-200/80 space-y-3">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={targetArtisan?.work_photos[0] || 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=150&q=80'}
-                    alt="Artisan"
-                    className="w-12 h-12 rounded-xl object-cover border border-slate-200"
-                  />
-                  <div>
-                    <h3 className="font-bold text-[#0E3B40] text-sm">
-                      {targetArtisan?.first_name} {targetArtisan?.last_name}
-                    </h3>
-                    <p className="text-xs text-[#16858F] font-semibold">{targetArtisan?.trade} • {targetArtisan?.location || 'Verified Artisan'}</p>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-200/80 space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium">Job Value:</span>
-                    <span className="font-semibold text-[#0E3B40]">
-                      ₦{(targetJob?.budget || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500 font-medium">Artiva Platform Fee:</span>
-                    <span className="font-semibold text-[#0E3B40]">
-                      ₦{matchFee.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 font-extrabold text-base text-[#0E3B40]">
-                    <span>Total Charged:</span>
-                    <span>₦{((targetJob?.budget || 0) + matchFee).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200/80 text-xs text-amber-900 leading-snug">
-                <strong>How Escrow Works:</strong> Funds are locked safely. The artisan is NOT paid until you confirm job completion in the app.
-              </div>
-
+          <div className="bg-[#F4F8F8] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              {targetArtisan?.work_photos?.[0] ? (
+                <img src={targetArtisan.work_photos[0]} alt="" className="w-12 h-12 rounded-xl object-cover" />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-slate-200" aria-hidden="true" />
+              )}
               <div>
-                <label className="block text-xs font-bold text-[#0E3B40] mb-1.5">Receipt email</label>
-                <input
-                  type="email"
-                  value={receiptEmail}
-                  onChange={(event) => setReceiptEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-[#0E3B40] focus:border-[#16858F] focus:ring-1 focus:ring-[#16858F] focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  onClick={handleInitializePaystack}
-                  disabled={!receiptEmail || loading}
-                  className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target disabled:opacity-50"
-                >
-                  <Lock className="w-4 h-4 stroke-[2.5]" />
-                  <span>Pay ₦{((targetJob?.budget || 0) + matchFee).toLocaleString()} securely</span>
-                </button>
-
-                <button
-                  onClick={handleSimulatePaymentFailure}
-                  className="w-full py-2 text-xs text-slate-400 font-medium hover:text-red-600 transition-colors"
-                >
-                  (Test Failed Payment Screen Flow)
-                </button>
-              </div>
-            </div>
-          )}
-
-          {paymentState === 'processing' && (
-            <div className="py-12 text-center space-y-4">
-              <div className="w-14 h-14 border-4 border-[#16858F] border-t-transparent rounded-full animate-spin mx-auto" />
-              <h3 className="font-bold text-base text-[#0E3B40] font-['Outfit']">
-                Contacting Paystack Gateway...
-              </h3>
-              <p className="text-xs text-slate-500">Processing escrow reservation over secure network.</p>
-            </div>
-          )}
-
-          {paymentState === 'failed' && (
-            <div className="py-6 text-center space-y-4 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto">
-                <AlertCircle className="w-8 h-8" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-red-900 font-['Outfit']">
-                  Payment Could Not Be Processed
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 max-w-xs mx-auto leading-relaxed">
-                  {errorMsg || 'Your payment attempt timed out or was rejected by your bank network.'}
+                <p className="font-bold text-sm text-[#0E3B40]">
+                  {targetArtisan?.first_name} {targetArtisan?.last_name}
                 </p>
+                <p className="text-xs text-slate-500">{targetArtisan?.trade || 'Approved artisan'}</p>
               </div>
+            </div>
+            <div className="border-t border-slate-200 pt-3 text-sm space-y-2">
+              <div className="flex justify-between"><span>Job value</span><span>₦{Number(targetJob?.budget || 0).toLocaleString()}</span></div>
+              <div className="flex justify-between"><span>Platform fee</span><span>₦500</span></div>
+              <div className="flex justify-between font-extrabold"><span>Expected total</span><span>₦{total.toLocaleString()}</span></div>
+            </div>
+          </div>
 
-              <div className="pt-2 space-y-2">
-                <button
-                  onClick={handleInitializePaystack}
-                  className="w-full py-3.5 bg-[#16858F] text-white text-xs font-bold rounded-2xl flex items-center justify-center gap-2 shadow-sm btn-press touch-target"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Retry Payment (₦{((targetJob?.budget || 0) + matchFee).toLocaleString()})</span>
-                </button>
+          <p className="text-xs text-slate-500">
+            The server calculates the final amount from the stored job and selected match. Paystack will display the authoritative charge before you approve it.
+          </p>
 
-                <button
-                  onClick={() => setPaymentState('summary')}
-                  className="w-full py-2 text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                >
-                  Back to Order Summary
-                </button>
-              </div>
+          {error && (
+            <div role="alert" className="flex gap-2 p-3 rounded-xl bg-red-50 text-red-800 text-xs font-semibold">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {paymentState === 'success' && (
-            <div className="py-6 text-center space-y-4 animate-fade-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-              <div>
-                <h3 className="text-xl font-extrabold text-[#0E3B40] font-['Outfit']">
-                  Match Fee Confirmed & Held!
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  You can now securely message {targetArtisan?.first_name} {targetArtisan?.last_name} in-app to coordinate.
-                </p>
-              </div>
-
-              <button
-                onClick={handleOpenChat}
-                className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 shadow-sm transition-all btn-press touch-target"
-              >
-                <span>Open Secure Chat</span>
-                <ArrowRight className="w-5 h-5 stroke-[2.5]" />
-              </button>
-            </div>
-          )}
-        </div>
+          <button
+            type="button"
+            onClick={startPayment}
+            disabled={loading || !targetJob?.job_id || !targetArtisan?.uid}
+            className="w-full py-4 bg-[#16858F] hover:bg-[#0E5C63] text-white font-extrabold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {loading ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Lock className="w-4 h-4" />}
+            <span>{loading ? 'Opening Paystack…' : 'Continue to Paystack'}</span>
+          </button>
+        </section>
       </main>
     </div>
   );

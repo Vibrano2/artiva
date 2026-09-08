@@ -1,623 +1,279 @@
-import React, { useState } from 'react';
-import { Header } from '../components/Header';
-import { ArtivaLogo } from '../components/ArtivaLogo';
-import { useApp } from '../context/AppContext';
-import { ApiService, ALL_TRADES, TARGET_LOCATIONS, TradeServicesMap } from '../services';
-import { OfflineBanner } from '../components/OfflineBanner';
-import { Wrench, ShieldCheck, ArrowRight, Upload, Phone, FileText, RefreshCw, KeyRound } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowRight, FileText, KeyRound, RefreshCw, ShieldCheck, Upload } from 'lucide-react';
 import { signInWithPhoneNumber } from 'firebase/auth';
+import { Header } from '../components/Header';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { useApp } from '../context/AppContext';
 import { auth } from '../config/firebase';
-import { 
-  formatNigerianPhoneNumber, 
-  getOrCreateRecaptchaVerifier, 
-  formatAuthError 
-} from '../utils/authUtils';
+import { ApiService, ALL_TRADES, TARGET_LOCATIONS, TradeServicesMap } from '../services';
+import { formatAuthError, formatNigerianPhoneNumber, getOrCreateRecaptchaVerifier } from '../utils/authUtils';
+
+const WORK_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ID_TYPES = new Set(['image/jpeg', 'image/png', 'application/pdf']);
+
+function Field({ label, children }) {
+  return <label className="block text-xs font-bold text-[#0E3B40]">{label}{children}</label>;
+}
+
+const inputClass = 'mt-2 w-full p-3 border border-slate-200 rounded-xl bg-white font-normal focus:outline-none focus:border-[#16858F]';
 
 export function ArtisanSignupScreen() {
-  const { navigateTo, setCurrentUser, setUserRole, showToast, currentUser } = useApp();
-
+  const { currentUser, navigateTo, setCurrentUser, setUserRole, showToast } = useApp();
   const [step, setStep] = useState(1);
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  
-  const [firstName, setFirstName] = useState(currentUser?.first_name || currentUser?.displayName?.split(' ')[0] || '');
-  const [lastName, setLastName] = useState(currentUser?.last_name || currentUser?.displayName?.split(' ').slice(1).join(' ') || '');
+  const [firstName, setFirstName] = useState(currentUser?.first_name || '');
+  const [lastName, setLastName] = useState(currentUser?.last_name || '');
   const [phone, setPhone] = useState(currentUser?.phoneNumber || '');
-  const [otp, setOtp] = useState('');
-  const [timer, setTimer] = useState(30);
-  
   const [experienceYears, setExperienceYears] = useState('');
-  const [trade, setTrade] = useState(ALL_TRADES[0]);
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
+  const [trade, setTrade] = useState(ALL_TRADES[0]);
+  const [services, setServices] = useState([]);
   const [tagline, setTagline] = useState('');
-  const [workPhotos, setWorkPhotos] = useState([
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=600&q=80'
-  ]);
-  const [idPhoto, setIdPhoto] = useState('');
   const [nin, setNin] = useState('');
-  const [selectedServices, setSelectedServices] = useState([]);
-  const [ndprConsent, setNdprConsent] = useState(false);
+  const [idDocument, setIdDocument] = useState(null);
+  const [workPhotos, setWorkPhotos] = useState([]);
+  const [banks, setBanks] = useState([]);
+  const [bankCode, setBankCode] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otp, setOtp] = useState('');
+  const [timer, setTimer] = useState(0);
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
+  const timerRef = useRef(null);
 
-  const availableServices = TradeServicesMap[trade] || ['General ' + trade, 'Emergency ' + trade, 'Maintenance'];
+  const availableServices = TradeServicesMap[trade] || [];
 
-  const toggleService = (svc) => {
-    if (selectedServices.includes(svc)) {
-      setSelectedServices(selectedServices.filter(s => s !== svc));
-    } else {
-      setSelectedServices([...selectedServices, svc]);
-    }
-  };
+  useEffect(() => () => window.clearInterval(timerRef.current), []);
+
+  useEffect(() => {
+    setServices((current) => current.filter((service) => availableServices.includes(service)));
+  }, [trade]);
+
+  useEffect(() => {
+    if (step !== 4 || banks.length) return;
+    ApiService.getBanks()
+      .then(setBanks)
+      .catch((loadError) => setError(loadError.message || 'Supported banks could not be loaded.'));
+  }, [step, banks.length]);
 
   const startTimer = () => {
+    window.clearInterval(timerRef.current);
     setTimer(30);
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
+    timerRef.current = window.setInterval(() => {
+      setTimer((current) => {
+        if (current <= 1) {
+          window.clearInterval(timerRef.current);
           return 0;
         }
-        return prev - 1;
+        return current - 1;
       });
     }, 1000);
   };
 
-  const handleNextStep = async () => {
-    setError(null);
-    if (step === 1) {
-      if (!firstName.trim()) return setError('Please provide your first name.');
-      if (!lastName.trim()) return setError('Please provide your last name.');
-      if (!experienceYears) return setError('Please provide your years of experience.');
-      
-      const { formatted, isValid } = formatNigerianPhoneNumber(phone);
-      if (!isValid) {
-        return setError('Please provide a valid 10 or 11-digit Nigerian phone number (e.g. 0803 123 4567).');
-      }
-      
-      setLoading(true);
-      try {
-        const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => {
-          setError('Security check expired. Please retry.');
-        });
-
-        // Real Firebase SMS OTP dispatch
-        const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
-        setConfirmationResult(confirmation);
-
-        setLoading(false);
-        setStep(2);
-        showToast(`SMS OTP sent from Firebase to ${formatted}`, 'success');
-        startTimer();
-      } catch (err) {
-        console.error('[Firebase Artisan Auth] Real SMS OTP dispatch error:', err);
-        setLoading(false);
-        const friendlyMsg = formatAuthError(err);
-        setError(friendlyMsg);
-      }
+  const sendOtp = async () => {
+    setError('');
+    const { formatted, isValid } = formatNigerianPhoneNumber(phone);
+    if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+      setError('Enter first and last names with at least two characters each.');
       return;
     }
-    if (step === 3 && !tagline) {
-      setError('Please provide a short tagline or bio.');
+    if (!Number.isInteger(Number(experienceYears)) || Number(experienceYears) < 0 || Number(experienceYears) > 100) {
+      setError('Enter valid years of experience from 0 to 100.');
       return;
     }
-    setStep(step + 1);
-  };
+    if (!isValid) {
+      setError('Enter a valid Nigerian phone number.');
+      return;
+    }
 
-  const handleVerifyOtp = async (e) => {
-    if (e) e.preventDefault();
-    if (!otp || otp.length < 6) {
-      setError('Please enter the 6-digit verification code.');
-      return;
-    }
     setLoading(true);
-    setError(null);
-    const { formatted } = formatNigerianPhoneNumber(phone);
-
     try {
-      let syncedUser;
-      if (confirmationResult && typeof confirmationResult.confirm === 'function') {
-        const result = await confirmationResult.confirm(otp);
-        const user = result.user;
-        const token = await user.getIdToken();
-        const syncRes = await ApiService.verifyFirebaseToken(token, 'artisan');
-        syncedUser = syncRes.user ? { ...user, ...syncRes.user } : user;
-      } else {
-        const res = await ApiService.verifyPhoneOtp(formatted, otp, 'artisan');
-        syncedUser = res.user || res;
-      }
-
-      setCurrentUser(syncedUser);
-      setLoading(false);
-      showToast('Phone verified successfully!', 'success');
-      setStep(3); // Proceed to Trade & Bio
-    } catch (err) {
-      setLoading(false);
-      const friendlyMsg = formatAuthError(err);
-      setError(friendlyMsg);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (timer > 0) return;
-    setError(null);
-    setLoading(true);
-    const { formatted } = formatNigerianPhoneNumber(phone);
-
-    try {
-      const appVerifier = getOrCreateRecaptchaVerifier('recaptcha-container');
-      const confirmation = await signInWithPhoneNumber(auth, formatted, appVerifier);
+      const verifier = getOrCreateRecaptchaVerifier('recaptcha-container', () => setError('Security check expired. Request a new code.'));
+      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
       setConfirmationResult(confirmation);
-      setLoading(false);
-      showToast(`New SMS OTP sent to ${formatted}`, 'success');
+      setPhone(formatted);
+      setStep(2);
       startTimer();
-    } catch (err) {
+      showToast('Firebase sent a verification code.', 'success');
+    } catch (sendError) {
+      setError(formatAuthError(sendError));
+    } finally {
       setLoading(false);
-      const friendlyMsg = formatAuthError(err);
-      setError(friendlyMsg);
     }
   };
 
-  const handleSubmitSignup = async (e) => {
-    e.preventDefault();
-    if (!nin || nin.length !== 11) {
-      setError('Please provide a valid 11-digit NIN.');
+  const verifyOtp = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      if (!confirmationResult || typeof confirmationResult.confirm !== 'function') {
+        throw new Error('Request a new Firebase verification code before continuing.');
+      }
+      const credential = await confirmationResult.confirm(otp);
+      const response = await ApiService.verifyFirebaseToken(await credential.user.getIdToken(), 'artisan');
+      if (response.user?.role !== 'artisan') throw new Error('This account is not registered as an artisan.');
+      setCurrentUser(response.user);
+      setUserRole('artisan');
+      setStep(3);
+      showToast('Phone number verified.', 'success');
+    } catch (verifyError) {
+      setError(formatAuthError(verifyError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const continueProfile = () => {
+    setError('');
+    if (!services.length) return setError('Select at least one service.');
+    if (tagline.trim().length < 5) return setError('Write a professional tagline of at least five characters.');
+    setStep(4);
+  };
+
+  const selectId = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!ID_TYPES.has(file.type) || file.size > 10 * 1024 * 1024) {
+      event.target.value = '';
+      setIdDocument(null);
+      setError('Identity document must be one JPEG, PNG, or PDF no larger than 10 MB.');
       return;
     }
-    if (!ndprConsent) {
-      setError('You must accept the NDPR Privacy Policy and Terms to proceed.');
+    setError('');
+    setIdDocument(file);
+  };
+
+  const selectWorkPhotos = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length < 3 || files.length > 5 || files.some((file) => !WORK_TYPES.has(file.type) || file.size > 5 * 1024 * 1024)) {
+      event.target.value = '';
+      setWorkPhotos([]);
+      setError('Choose 3 to 5 JPEG, PNG, or WebP work photos, each no larger than 5 MB.');
+      return;
+    }
+    setError('');
+    setWorkPhotos(files);
+  };
+
+  const resolveAccount = async () => {
+    setError('');
+    setAccountName('');
+    if (!/^\d{10}$/.test(accountNumber) || !/^\d{3,6}$/.test(bankCode)) {
+      setError('Choose a bank and enter a 10-digit account number.');
       return;
     }
     setLoading(true);
-    setError(null);
-
     try {
-      const res = await ApiService.signupArtisan({
+      const account = await ApiService.resolveBankAccount(accountNumber, bankCode);
+      if (!account.account_name) throw new Error('The provider did not return an account name.');
+      setAccountName(account.account_name);
+      showToast('Bank account verified.', 'success');
+    } catch (resolveError) {
+      setError(resolveError.message || 'Bank account could not be verified.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (!/^\d{11}$/.test(nin)) return setError('Enter a valid 11-digit NIN.');
+    if (!(idDocument instanceof File)) return setError('Upload a valid identity document.');
+    if (workPhotos.length < 3 || workPhotos.length > 5) return setError('Upload 3 to 5 work photos.');
+    if (!accountName) return setError('Verify the payout account before submitting.');
+    if (!consent) return setError('Accept the Terms and Privacy Policy before submitting.');
+
+    setLoading(true);
+    try {
+      await ApiService.signupArtisan({
         first_name: firstName,
         last_name: lastName,
-        email: '',
-        password: '',
-        phone: phone,
+        phone,
         experience_years: Number(experienceYears),
         trade,
-        services: selectedServices,
+        services,
         location,
         tagline,
+        nin,
+        id_document: idDocument,
         work_photos: workPhotos,
-        id_photo: idPhoto,
-        nin
+        bank_details: {
+          account_name: accountName,
+          account_number: accountNumber,
+          bank_code: bankCode,
+        },
       });
-
+      showToast('Profile submitted for verification.', 'success');
+      navigateTo('artisan_pending');
+    } catch (submitError) {
+      setError(submitError.message || 'Registration could not be submitted.');
+    } finally {
       setLoading(false);
-      setUserRole('artisan');
-      showToast('Signup submitted! Verification pending.', 'success');
-      navigateTo('artisan_pending', { artisanId: res.artisanId });
-    } catch (err) {
-      setLoading(false);
-      setError(err.message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0E3B40] flex flex-col justify-between relative overflow-hidden pb-12">
-      <div className="relative z-30">
-        <Header title="Artisan Registration" backTo="onboarding" />
-        <OfflineBanner onRetry={handleSubmitSignup} />
-      </div>
-
-      <div id="recaptcha-container"></div>
-
-      <main className="max-w-md mx-auto w-full px-4 py-6 flex-1 relative z-20">
-        <div 
-          className="bg-white/55 backdrop-blur-[6px] p-8 rounded-[18px] space-y-6"
-          style={{
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.18)'
-          }}
-        >
-          <div className="flex flex-col items-center mb-2">
-            <div className="mb-2">
-              <ArtivaLogo size="md" showWordmark={false} />
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#0E3B40] pb-12">
+      <Header title="Artisan registration" backTo="onboarding" />
+      <OfflineBanner onRetry={step === 1 ? sendOtp : undefined} />
+      <div id="recaptcha-container" />
+      <main className="max-w-md mx-auto px-4 py-8">
+        <section className="bg-white p-6 rounded-3xl shadow-card space-y-5">
           <div>
-            <div className="flex items-center justify-between text-xs font-bold text-[#1f1f1f] uppercase tracking-wider mb-2">
-              <span>Step {step} of 4</span>
-              <span className="text-[#16858F]">
-                {step === 1 ? 'Contact Info' : step === 2 ? 'Verify Phone' : step === 3 ? 'Trade & Bio' : 'ID & Verification'}
-              </span>
-            </div>
-            <div className="w-full h-2 bg-white/40 rounded-full overflow-hidden border border-white/50">
-              <div
-                className="h-full bg-[#16858F] transition-all duration-300"
-                style={{ width: `${(step / 4) * 100}%` }}
-              />
-            </div>
+            <div className="flex justify-between text-xs font-bold uppercase"><span>Step {step} of 4</span><span className="text-[#16858F]">Secure onboarding</span></div>
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-[#16858F]" style={{ width: `${step * 25}%` }} /></div>
           </div>
+          {error && <p role="alert" className="p-3 rounded-xl bg-red-50 text-red-800 text-xs font-semibold">{error}</p>}
 
-          {error && (
-            <div className="p-3.5 bg-red-50/90 border border-red-200 text-red-800 text-xs font-semibold rounded-xl text-left space-y-2.5">
-              <p>{error}</p>
-              {step === 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setConfirmationResult(null);
-                    setStep(2);
-                    showToast('Switched to Test OTP mode (Use 123456)', 'info');
-                  }}
-                  className="w-full py-1.5 px-3 bg-[#16858F] hover:bg-[#0E5C63] text-white font-bold rounded-lg text-xs transition-all text-center block shadow-sm active:scale-95"
-                >
-                  ⚡ Skip & Continue With Test OTP (123456)
-                </button>
-              )}
+          {step === 1 && <div className="space-y-4">
+            <h1 className="text-xl font-extrabold text-[#0E3B40]">Contact details</h1>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="First name"><input value={firstName} onChange={(event) => setFirstName(event.target.value.slice(0, 80))} autoComplete="given-name" className={inputClass} /></Field>
+              <Field label="Last name"><input value={lastName} onChange={(event) => setLastName(event.target.value.slice(0, 80))} autoComplete="family-name" className={inputClass} /></Field>
             </div>
-          )}
+            <Field label="Nigerian phone number"><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value.replace(/[^\d+]/g, '').slice(0, 14))} autoComplete="tel" className={inputClass} /></Field>
+            <Field label="Years of experience"><input type="number" min="0" max="100" step="1" value={experienceYears} onChange={(event) => setExperienceYears(event.target.value)} className={inputClass} /></Field>
+            <Field label="Primary location"><select value={location} onChange={(event) => setLocation(event.target.value)} className={inputClass}>{TARGET_LOCATIONS.map((item) => <option key={item}>{item}</option>)}</select></Field>
+            <button type="button" onClick={sendOtp} disabled={loading} className="w-full py-3.5 bg-[#16858F] text-white font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50">Send Firebase code <ArrowRight className="w-4 h-4" /></button>
+          </div>}
 
-          {step === 1 && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <h2 className="text-[22px] font-bold text-[#1f1f1f] mb-2">Contact Information</h2>
-              
-              <div className="flex gap-3 mb-2">
-                <button 
-                  type="button"
-                  onClick={() => showToast('Apple login coming soon (MVP currently supports Phone Auth only)', 'info')}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#1f1f1f] hover:bg-black text-white text-[13px] font-bold rounded-xl transition-all shadow-sm"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V15.39h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 3.39h-2.33v6.488C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z" display="none"/><path d="M16.636 12.008c0-3.033 2.47-4.49 2.584-4.568-1.423-2.083-3.626-2.368-4.407-2.4-1.879-.191-3.676 1.106-4.636 1.106-.962 0-2.441-1.077-3.987-1.047-2.016.03-3.882 1.171-4.918 2.975-2.093 3.625-.536 8.988 1.503 11.936 1.004 1.442 2.183 3.06 3.743 3.003 1.498-.059 2.062-.969 3.864-.969 1.796 0 2.308.97 3.867.94 1.603-.027 2.61-1.465 3.593-2.923 1.144-1.677 1.614-3.3 1.637-3.385-.035-.015-3.178-1.218-3.178-4.664M11.979 4.398c.816-1.004 1.365-2.404 1.215-3.805-1.205.048-2.673.811-3.518 1.815-.758.88-1.421 2.3-1.245 3.68 1.346.104 2.73-.708 3.548-1.69" /></svg>
-                  Apple
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => showToast('Google login coming soon (MVP currently supports Phone Auth only)', 'info')}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-gray-50 text-[#1f1f1f] text-[13px] font-bold rounded-xl transition-all shadow-sm border border-[#e0e0e0]"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                  Google
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-px bg-[#e0e0e0] flex-1"></div>
-                <span className="text-[11px] font-bold text-[#8a8a8a] uppercase tracking-wider">or sign up with phone</span>
-                <div className="h-px bg-[#e0e0e0] flex-1"></div>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">First Name</label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="John"
-                  autoComplete="given-name"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Last Name</label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Doe"
-                  autoComplete="family-name"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Years of Experience</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={experienceYears}
-                  onChange={(e) => setExperienceYears(e.target.value)}
-                  placeholder="e.g. 5"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Phone Number</label>
-                <div className="flex items-center rounded-[10px] border-[1.5px] border-[#e0e0e0] bg-[#fafafa] focus-within:border-[#16858F] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#16858F]/25 overflow-hidden transition-all">
-                  <span className="px-3 py-[13px] text-[#444] font-semibold text-[15px] border-r border-[#e0e0e0] flex items-center gap-1.5 bg-gray-50/50">
-                    <span className="text-base">🇳🇬</span> +234
-                  </span>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    placeholder="803 123 4567"
-                    className="w-full p-[13px_14px] text-[15px] text-[#222] outline-none bg-transparent"
-                    maxLength={10}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Primary Estate</label>
-                <select
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                >
-                  {TARGET_LOCATIONS.map((loc) => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleNextStep}
-                disabled={loading}
-                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)] disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Continue</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+          {step === 2 && <form onSubmit={verifyOtp} className="space-y-4">
+            <h1 className="text-xl font-extrabold text-[#0E3B40]">Verify phone</h1>
+            <p className="text-xs text-slate-500">Enter the six-digit SMS code sent by Firebase.</p>
+            <input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" className={`${inputClass} text-center text-2xl tracking-[0.35em]`} />
+            <div className="flex justify-between text-xs">
+              <button type="button" onClick={() => setStep(1)} className="font-bold text-slate-600">Change number</button>
+              {timer ? <span className="text-slate-500">Resend in {timer}s</span> : <button type="button" onClick={sendOtp} disabled={loading} className="font-bold text-[#16858F] flex gap-1"><RefreshCw className="w-3 h-3" /> Resend</button>}
             </div>
-          )}
+            <button type="submit" disabled={loading || otp.length !== 6} className="w-full py-3.5 bg-[#16858F] text-white font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50"><KeyRound className="w-4 h-4" /> Verify phone</button>
+          </form>}
 
-          {step === 2 && (
-            <form onSubmit={handleVerifyOtp} className="space-y-[18px] animate-fade-in text-left">
-              <div className="mb-4">
-                <h2 className="text-[22px] font-bold text-[#1f1f1f] mb-1">Verify Phone</h2>
-                <p className="text-[13px] text-[#6b6b6b]">We sent a 6-digit OTP code to your phone.</p>
-              </div>
+          {step === 3 && <div className="space-y-4">
+            <h1 className="text-xl font-extrabold text-[#0E3B40]">Trade profile</h1>
+            <Field label="Primary trade"><select value={trade} onChange={(event) => setTrade(event.target.value)} className={inputClass}>{ALL_TRADES.map((item) => <option key={item}>{item}</option>)}</select></Field>
+            <fieldset><legend className="text-xs font-bold text-[#0E3B40]">Services</legend><div className="flex flex-wrap gap-2 mt-2">{availableServices.map((service) => <button type="button" key={service} onClick={() => setServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service])} className={`px-3 py-2 rounded-full text-xs font-bold border ${services.includes(service) ? 'bg-[#16858F] text-white border-[#16858F]' : 'bg-white text-slate-600 border-slate-200'}`}>{service}</button>)}</div></fieldset>
+            <Field label="Professional tagline"><textarea value={tagline} onChange={(event) => setTagline(event.target.value.slice(0, 100))} minLength={5} maxLength={100} rows={3} className={inputClass} /></Field>
+            <div className="flex gap-2"><button type="button" onClick={() => setStep(2)} className="w-1/3 py-3.5 bg-slate-100 rounded-2xl font-bold">Back</button><button type="button" onClick={continueProfile} className="w-2/3 py-3.5 bg-[#16858F] text-white rounded-2xl font-bold">Continue</button></div>
+          </div>}
 
-              <div className="p-3 bg-teal-50 border border-teal-200/80 rounded-xl text-left flex items-center justify-between shadow-sm">
-                <div>
-                  <p className="text-[12px] font-bold text-[#0E5C63]">Testing / Demo Mode</p>
-                  <p className="text-[11px] text-gray-600">Verification Code: <strong className="text-[#16858F] font-mono text-xs">123456</strong></p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtp('123456')}
-                  className="px-2.5 py-1 bg-[#16858F] hover:bg-[#0E5C63] text-white text-[11px] font-bold rounded-lg transition-all shadow-sm active:scale-95"
-                >
-                  Auto-Fill
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 text-center">
-                  Enter 6-Digit OTP
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="• • • • • •"
-                  className="w-full p-[13px_14px] text-center text-2xl tracking-[0.4em] font-bold text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                  maxLength={6}
-                  autoFocus
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[13px] text-[#6b6b6b] mt-[18px]">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="hover:text-[#1f1f1f] transition-colors font-semibold"
-                >
-                  Change Number
-                </button>
-                {timer > 0 ? (
-                  <span>Resend code in {timer}s</span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    className="font-bold hover:text-[#1f1f1f] flex items-center gap-1 transition-colors"
-                  >
-                    <RefreshCw className="w-3 h-3" /> Resend OTP
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px disabled:opacity-50 mt-1.5 flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)]"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Verify Phone</span>
-                    <KeyRound className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <h2 className="text-[22px] font-bold text-[#1f1f1f] mb-2">Select Main Trade & Tagline</h2>
-              
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Trade Category</label>
-                <select
-                  value={trade}
-                  onChange={(e) => setTrade(e.target.value)}
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                >
-                  {ALL_TRADES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Specific Services (Select Multiple)</label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {availableServices.map((svc) => (
-                    <button
-                      key={svc}
-                      type="button"
-                      onClick={() => toggleService(svc)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        selectedServices.includes(svc)
-                          ? 'bg-[#16858F] text-white border-[#16858F] shadow-sm'
-                          : 'bg-white/40 text-[#444] border-white/50 hover:bg-white/60'
-                      }`}
-                    >
-                      {svc}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">Professional Tagline / Bio</label>
-                <textarea
-                  value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Expert plumber with 5 years experience handling leaks and installations."
-                  rows={3}
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="w-1/3 p-[14px] text-[15px] border border-[#e0e0e0] bg-[#fafafa] text-[#6b6b6b] hover:text-[#1f1f1f] font-bold rounded-[10px] transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="w-2/3 p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)]"
-                >
-                  <span>Next Step</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <form onSubmit={handleSubmitSignup} className="space-y-5 animate-fade-in text-left">
-              <div>
-                <h2 className="text-[22px] font-bold text-[#1f1f1f] mb-1">Verification</h2>
-                <p className="text-xs text-[#6b6b6b]">Upload an ID and work samples to become a verified artisan.</p>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-2 uppercase">Upload Valid ID</label>
-                <label className="h-28 rounded-2xl border-2 border-dashed border-[#16858F] flex flex-col items-center justify-center p-2 text-center text-[#16858F] bg-white/40 cursor-pointer hover:bg-white/60 transition-colors">
-                  <input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => setIdPhoto(reader.result);
-                      reader.readAsDataURL(file);
-                    }
-                  }} />
-                  {idPhoto ? (
-                    <img src={idPhoto} alt="ID Preview" className="h-full object-contain" />
-                  ) : (
-                    <>
-                      <Upload className="w-6 h-6 mb-1" />
-                      <span className="text-xs font-bold">Tap to Upload ID</span>
-                    </>
-                  )}
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-1.5 uppercase">NIN Number</label>
-                <input
-                  type="text"
-                  value={nin}
-                  onChange={(e) => setNin(e.target.value.replace(/[^0-9]/g, '').slice(0, 11))}
-                  placeholder="11-digit NIN"
-                  className="w-full p-[13px_14px] text-[15px] text-[#222] border-[1.5px] border-[#e0e0e0] rounded-[10px] outline-none bg-[#fafafa] transition-all focus:border-[#16858F] focus:bg-white focus:ring-4 focus:ring-[#16858F]/25 tracking-widest"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-semibold text-[#444] mb-2 uppercase">Work Photos</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {workPhotos.map((url, i) => (
-                    <img key={i} src={url} alt="Work sample" className="w-full h-28 object-cover rounded-[10px] border border-[#e0e0e0]" />
-                  ))}
-                  <label className="h-28 rounded-[10px] border-2 border-dashed border-white flex flex-col items-center justify-center p-2 text-center text-[#6b6b6b] bg-white/40 cursor-pointer hover:bg-white/60">
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
-                      const files = Array.from(e.target.files);
-                      files.forEach(file => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => setWorkPhotos(prev => [...prev, reader.result]);
-                        reader.readAsDataURL(file);
-                      });
-                    }} />
-                    <Upload className="w-6 h-6 mb-1" />
-                    <span className="text-[10px] font-bold">Add Photo</span>
-                  </label>
-                </div>
-              </div>
-
-              <div 
-                onClick={() => setNdprConsent(!ndprConsent)}
-                className="flex items-start gap-3 cursor-pointer select-none p-3 rounded-xl hover:bg-white/30 transition-colors text-left border border-transparent hover:border-[#e0e0e0]"
-              >
-                <div className="flex items-center justify-center h-5 mt-0.5">
-                  <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${ndprConsent ? 'bg-[#16858F] border-[#16858F]' : 'bg-[#fafafa] border-[#e0e0e0]'}`}>
-                    {ndprConsent && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[13px] font-bold text-[#444] leading-tight">
-                    NDPR Consent & Terms
-                  </p>
-                  <p className="text-[12px] text-[#6b6b6b] leading-tight mt-1">
-                    I agree to Artiva's Terms and Privacy Policy. I consent to the processing of my NIN and ID for verification.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep(3)}
-                  className="w-1/3 p-[14px] text-[15px] border border-[#e0e0e0] bg-[#fafafa] text-[#6b6b6b] hover:text-[#1f1f1f] font-bold rounded-[10px] transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-2/3 p-[14px] text-[15px] font-bold text-white bg-[#16858F] border-none rounded-[10px] cursor-pointer transition-all hover:bg-[#0E5C63] active:translate-y-px flex justify-center items-center gap-2 shadow-[0_4px_10px_rgba(22,133,143,0.3)] disabled:opacity-50"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>Submit</span>
-                      <ShieldCheck className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-
-        </div>
+          {step === 4 && <form onSubmit={submit} className="space-y-4">
+            <h1 className="text-xl font-extrabold text-[#0E3B40]">Identity and payout</h1>
+            <Field label="11-digit NIN"><input value={nin} onChange={(event) => setNin(event.target.value.replace(/\D/g, '').slice(0, 11))} inputMode="numeric" className={inputClass} /></Field>
+            <label className="block p-4 border-2 border-dashed border-[#16858F] rounded-2xl text-center text-[#16858F] cursor-pointer"><input type="file" accept="image/jpeg,image/png,application/pdf" onChange={selectId} className="hidden" />{idDocument ? <FileText className="w-5 h-5 mx-auto" /> : <Upload className="w-5 h-5 mx-auto" />}<span className="block text-xs font-bold mt-1">{idDocument?.name || 'Choose ID document'}</span></label>
+            <label className="block p-4 border-2 border-dashed border-[#16858F] rounded-2xl text-center text-[#16858F] cursor-pointer"><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={selectWorkPhotos} className="hidden" /><Upload className="w-5 h-5 mx-auto" /><span className="block text-xs font-bold mt-1">{workPhotos.length ? `${workPhotos.length} work photos selected` : 'Choose 3 to 5 work photos'}</span></label>
+            <Field label="Bank"><select value={bankCode} onChange={(event) => { setBankCode(event.target.value); setAccountName(''); }} className={inputClass}><option value="">Choose a bank</option>{banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}</select></Field>
+            <Field label="10-digit account number"><input value={accountNumber} onChange={(event) => { setAccountNumber(event.target.value.replace(/\D/g, '').slice(0, 10)); setAccountName(''); }} inputMode="numeric" className={inputClass} /></Field>
+            <button type="button" onClick={resolveAccount} disabled={loading || !bankCode || accountNumber.length !== 10} className="w-full py-3 bg-slate-100 text-[#0E3B40] rounded-xl font-bold disabled:opacity-50">Verify payout account</button>
+            {accountName && <p className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold"><ShieldCheck className="inline w-4 h-4 mr-1" /> {accountName}</p>}
+            <label className="flex gap-3 text-xs text-slate-600"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" /><span>I accept the Terms and Privacy Policy and consent to identity and payout-account verification.</span></label>
+            <div className="flex gap-2"><button type="button" onClick={() => setStep(3)} className="w-1/3 py-3.5 bg-slate-100 rounded-2xl font-bold">Back</button><button type="submit" disabled={loading} className="w-2/3 py-3.5 bg-[#16858F] text-white rounded-2xl font-bold disabled:opacity-50">{loading ? 'Submitting…' : 'Submit for review'}</button></div>
+          </form>}
+        </section>
       </main>
-
     </div>
   );
 }

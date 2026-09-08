@@ -3,17 +3,16 @@ import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService, ALL_TRADES, TARGET_LOCATIONS } from '../services';
 import { OfflineBanner } from '../components/OfflineBanner';
-import { Wrench, MapPin, Clock, DollarSign, Image, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Wrench, MapPin, ArrowRight } from 'lucide-react';
 
 export function PostJobScreen({ initialTrade = 'Plumbing' }) {
-  const { navigateTo, currentUser, showToast } = useApp();
+  const { navigateTo, showToast } = useApp();
 
   const [trade, setTrade] = useState(initialTrade);
   const [location, setLocation] = useState(TARGET_LOCATIONS[0]);
   const [urgency, setUrgency] = useState('Today');
   const [description, setDescription] = useState('');
   const [budget, setBudget] = useState('');
-  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -40,8 +39,6 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
         urgency,
         description,
         budget: Number(budget),
-        photos,
-        client_uid: currentUser?.uid
       });
 
       setLoading(false);
@@ -150,7 +147,7 @@ export function PostJobScreen({ initialTrade = 'Plumbing' }) {
                   required
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 font-medium">This is the amount held in escrow. You only release it when the job is done.</p>
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">The server locks this job value when payment is initialized. Completion submits the artisan payout.</p>
             </div>
 
             <div>

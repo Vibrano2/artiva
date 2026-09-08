@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
 import { useApp } from '../context/AppContext';
 import { ApiService } from '../services';
-import { Send, Image as ImageIcon, CheckCircle2, MapPin, CheckSquare } from 'lucide-react';
+import { Send, CheckCircle2, MapPin, CheckSquare } from 'lucide-react';
 
 export function ChatScreen({ job, artisan }) {
   const { currentUser, navigateTo, showToast } = useApp();
@@ -48,7 +48,7 @@ export function ChatScreen({ job, artisan }) {
       ...prev,
       {
         id: tempId,
-        sender_uid: currentUser?.uid || 'user_demo_client',
+        sender_uid: currentUser.uid,
         text: messageText,
         created_at: new Date().toISOString(),
       }
@@ -56,9 +56,8 @@ export function ChatScreen({ job, artisan }) {
 
     try {
       if (!jobId) throw new Error('A job is required to send a message.');
-      await ApiService.sendChatMessage(jobId, messageText, currentUser?.uid);
-    } catch (err) {
-      console.error("Send message error:", err);
+      await ApiService.sendChatMessage(jobId, messageText);
+    } catch {
       showToast('Message sending failed. Check connection.', 'error');
     }
   };
@@ -115,7 +114,7 @@ export function ChatScreen({ job, artisan }) {
           </div>
         ) : (
           messages.map((msg) => {
-            const isMe = msg.sender_uid === (currentUser?.uid || 'user_demo_client');
+            const isMe = msg.sender_uid === currentUser?.uid;
             return (
               <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                 <div

@@ -1,132 +1,48 @@
-# Artiva — Deployment Guide
+# Artiva frontend deployment
 
-## Prerequisites
+Artiva is the browser application. The Verifix repository is the only backend and owns Firebase Functions, Firestore rules and indexes, Storage rules, Paystack integration, and the ML service.
 
-- Node 20 +  
-- Firebase CLI ≥ 13: `npm install -g firebase-tools`  
-- Logged in: `firebase login`  
-- Project selected: `firebase use <your-project-id>`
+## Required configuration
 
----
+Use Node.js 20. Copy `.env.example` to `.env` for local development and fill in the Firebase web application values. Firebase web configuration is public application metadata, but production values should still be managed as deployment variables so each environment is explicit.
 
-## 1. Frontend environment variables
+The recommended production setup serves the frontend and Verifix API from the same Firebase project. The hosting rewrite in `firebase.json` sends `/api/**` to the `api` function in `us-central1`. Leave `VITE_API_BASE_URL` empty in that setup.
 
-Copy `.env.example` → `.env` and fill in your Firebase project values.
+For local emulator development, run the Verifix emulators first, then set:
 
-```
-VITE_FIREBASE_API_KEY=AIza...
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
-VITE_FIREBASE_APP_ID=1:123456789:web:abc123
-VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
-VITE_USE_FIREBASE_EMULATOR=false
+```dotenv
+VITE_USE_FIREBASE_EMULATOR=true
+VITE_FIREBASE_PROJECT_ID=your-emulator-project-id
 ```
 
----
+The frontend expects Auth on port 9095, Firestore on 8085, and the Verifix API function on 5005.
 
-## 2. Firebase Functions secrets & params
+## CI and production deployment
 
-### 2a. Paystack secret key (Firebase Secret — encrypted at rest)
+Configure these GitHub repository variables:
+
+- `GCP_PROJECT_ID`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID` (optional)
+
+Configure these GitHub secrets for Workload Identity Federation:
+
+- `WIF_PROVIDER`
+- `WIF_SERVICE_ACCOUNT`
+
+The service account needs only the IAM permissions required to deploy Firebase Hosting. Protect the `main` branch and require the frontend quality job before merge. A push to `main` builds the application and deploys only Hosting. Deploy the Verifix backend separately before publishing a frontend that depends on a new API contract.
+
+For a controlled local deployment:
 
 ```bash
-firebase functions:secrets:set PAYSTACK_SECRET_KEY
-# paste your Paystack secret key (sk_test_... or sk_live_...) when prompted
+npm ci
+npm run check
+npm run deploy -- --project your-project-id
 ```
 
-> The secret is referenced in `functions/index.js` via `defineSecret('PAYSTACK_SECRET_KEY')`.  
-> Every function that uses Paystack declares `secrets: [paystackSecretKey]` in its config.
-
-To verify it was stored:
-```bash
-firebase functions:secrets:access PAYSTACK_SECRET_KEY
-```
-
-### 2b. Admin UID param (plain string — not sensitive)
-
-`ADMIN_UID` is the Firebase Auth UID of the account that should receive the first admin custom claim.
-
-```bash
-# Find the UID in Firebase Console → Authentication → Users
-# Then set it as a Functions param:
-firebase functions:params:set ADMIN_UID=<uid-of-admin-user>
-```
-
-> Alternatively, set it in the Firebase Console under  
-> **Functions → Configuration → Environment variables**.
-
----
-
-## 3. Deploy
-
-### Functions only
-```bash
-npm run deploy:functions
-# or: firebase deploy --only functions
-```
-
-### Firestore rules + indexes
-```bash
-firebase deploy --only firestore
-```
-
-### Storage rules
-```bash
-firebase deploy --only storage
-```
-
-### Everything at once
-```bash
-npm run deploy
-# or: firebase deploy
-```
-
----
-
-## 4. Bootstrap the first admin
-
-After deploying functions:
-
-1. Sign in to the app with the account whose UID you set as `ADMIN_UID`.
-2. Navigate to **Admin Dashboard**.
-3. Tap **Bootstrap Admin Claim**.
-4. Sign out, then sign back in — the admin custom claim is now active.
-
-> The `bootstrapAdmin` Cloud Function verifies that the caller's UID matches `ADMIN_UID` before granting the claim.  
-> Use `setAdminClaim` (also on the Admin Dashboard) to add additional admins afterward.
-
----
-
-## 5. Paystack webhook
-
-Configure the Paystack webhook in your Paystack dashboard:
-
-- **URL**: `https://<region>-<project-id>.cloudfunctions.net/paystackWebhook`  
-- **Events**: `charge.success`, `transfer.success`
-
-The function validates the `x-paystack-signature` HMAC-SHA512 header against your `PAYSTACK_SECRET_KEY`.
-
----
-
-## 6. Local development (emulators)
-
-```bash
-# Start all emulators
-firebase emulators:start
-
-# In a separate terminal, start Vite dev server
-npm run dev
-```
-
-Set `VITE_USE_FIREBASE_EMULATOR=true` in `.env` to route all SDK calls to localhost emulators.
-
----
-
-## 7. Scheduled functions
-
-`checkNoResponseTimers` runs every 5 minutes.  
-`dailyMaintenance` runs every 24 hours.
-
-Both are deployed automatically with `firebase deploy --only functions`.  
-No additional setup required — Firebase Scheduler handles them.
+Do not deploy Functions or security rules from this repository.

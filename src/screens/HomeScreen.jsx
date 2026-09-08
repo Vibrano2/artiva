@@ -26,7 +26,7 @@ export function HomeScreen() {
             </div>
             
             <p className="text-lg text-muted max-w-lg leading-relaxed">
-              Artiva connects you with verified, skilled, and reliable artisans for any job — fast, secure, and hassle-free.
+              Artiva connects you with reviewed artisan profiles for local service jobs in Abuja.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
@@ -57,8 +57,8 @@ export function HomeScreen() {
               <div className="flex items-start gap-3">
                 <ShieldCheck aria-hidden="true" className="w-5 h-5 mt-0.5 flex-shrink-0 text-[#16D4C6]" strokeWidth={1.75} />
                 <div className="text-left">
-                  <h4 className="text-[13px] font-semibold text-white">Verified Artisans</h4>
-                  <p className="text-[11px] text-muted">Background checked</p>
+                  <h4 className="text-[13px] font-semibold text-white">Reviewed Profiles</h4>
+                  <p className="text-[11px] text-muted">Identity evidence reviewed</p>
                 </div>
               </div>
               <div className="hidden sm:block w-px h-8 bg-[#2b3340]"></div>
@@ -120,7 +120,7 @@ export function HomeScreen() {
                     <h3 className="text-[14px] font-bold text-white">Get Matched</h3>
                   </div>
                   <p className="text-[12px] text-muted leading-relaxed">
-                    We connect you with verified artisans near you.
+                    Review approved artisan profiles matched to your job.
                   </p>
                 </div>
               </div>
@@ -135,7 +135,7 @@ export function HomeScreen() {
                     <h3 className="text-[14px] font-bold text-white">Job Done</h3>
                   </div>
                   <p className="text-[12px] text-muted leading-relaxed">
-                    Approve the work and pay only when you're satisfied.
+                    Confirm completion to submit the artisan payout.
                   </p>
                 </div>
               </div>
@@ -148,8 +148,8 @@ export function HomeScreen() {
             </div>
             <div className="text-center sm:text-left">
               <p className="text-[13px] text-muted">
-                <span className="text-[#c9cbcf] font-semibold block sm:inline mr-1">Your payment is held securely in escrow.</span>
-                Pay only when the job is done to your satisfaction.
+                <span className="text-[#c9cbcf] font-semibold block sm:inline mr-1">Your payment is held for the job.</span>
+                Completion confirmation starts payout processing.
               </p>
             </div>
           </div>
@@ -161,7 +161,7 @@ export function HomeScreen() {
               For skilled hands
             </h2>
             <p className="text-[15px] text-muted leading-relaxed">
-              Turn your next job into a trusted opportunity. Join a network of verified professionals and grow your business with Artiva.
+              Turn your next job into a trusted opportunity. Apply to join Artiva and grow your business.
             </p>
             <div className="pt-4">
               <button

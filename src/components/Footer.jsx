@@ -1,10 +1,10 @@
 import React from 'react';
 import { ArtivaLogo } from './ArtivaLogo';
 import { useApp } from '../context/AppContext';
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
 
 export function Footer() {
-  const { navigateTo, showToast } = useApp();
+  const { navigateTo, setUserRole } = useApp();
 
   return (
     <footer className="bg-dark-footer text-muted border-t border-[#161f2d] pt-16 pb-8">
@@ -15,22 +15,8 @@ export function Footer() {
               <ArtivaLogo size="md" showWordmark={true} lightMode={true} />
             </div>
             <p className="text-[13px] text-muted max-w-sm leading-relaxed">
-              Connecting you with verified, skilled, and reliable artisans for any job — fast, secure, and hassle-free.
+              Connecting you with reviewed artisan profiles for local service jobs in Abuja.
             </p>
-            <div className="flex items-center gap-4 text-white">
-              <button type="button" onClick={() => showToast('Facebook is coming soon.', 'info')} aria-label="Facebook profile coming soon" className="w-8 h-8 rounded-full border border-[#16858F] bg-transparent flex items-center justify-center hover:bg-[#16858F]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6] transition-colors">
-                <Facebook className="w-4 h-4 fill-current" />
-              </button>
-              <button type="button" onClick={() => showToast('Instagram is coming soon.', 'info')} aria-label="Instagram profile coming soon" className="w-8 h-8 rounded-full border border-[#16858F] bg-transparent flex items-center justify-center hover:bg-[#16858F]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6] transition-colors">
-                <Instagram className="w-4 h-4" />
-              </button>
-              <button type="button" onClick={() => showToast('X is coming soon.', 'info')} aria-label="X profile coming soon" className="w-8 h-8 rounded-full border border-[#16858F] bg-transparent flex items-center justify-center hover:bg-[#16858F]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6] transition-colors">
-                <Twitter className="w-4 h-4 fill-current" />
-              </button>
-              <button type="button" onClick={() => showToast('LinkedIn is coming soon.', 'info')} aria-label="LinkedIn profile coming soon" className="w-8 h-8 rounded-full border border-[#16858F] bg-transparent flex items-center justify-center hover:bg-[#16858F]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6] transition-colors">
-                <Linkedin className="w-4 h-4 fill-current" />
-              </button>
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -75,12 +61,6 @@ export function Footer() {
             </h4>
             <ul className="space-y-3 text-[13px] text-muted">
               <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-[#16858F] flex-shrink-0" />
-                <a href="tel:+234800278482" className="hover:text-white transition-colors">
-                  +234 (0) 800 ARTIVA
-                </a>
-              </li>
-              <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#16858F] flex-shrink-0" />
                 <a href="mailto:support@artiva.ng" className="hover:text-white transition-colors">
                   support@artiva.ng
@@ -91,37 +71,6 @@ export function Footer() {
                 <span>Life Camp, Abuja, Nigeria</span>
               </li>
             </ul>
-            
-            <div className="pt-2 flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => showToast('Artiva Android app is currently in closed testing.', 'info')}
-                aria-label="Get Artiva on Google Play"
-                className="block w-[180px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6]"
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-                  alt="Get it on Google Play"
-                  width="180"
-                  height="53"
-                  loading="lazy"
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => showToast('Artiva iOS app is currently in closed testing on TestFlight.', 'info')}
-                aria-label="Download Artiva on the App Store"
-                className="block w-[180px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16D4C6]"
-              >
-                <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
-                  alt="Download on the App Store"
-                  width="180"
-                  height="53"
-                  loading="lazy"
-                />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -131,7 +80,7 @@ export function Footer() {
           <div className="flex items-center gap-6">
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('terms'); }} className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('privacy'); }} className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('admin_dash'); }} className="hover:text-white transition-colors">Admin Login</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setUserRole('client'); navigateTo('login'); }} className="hover:text-white transition-colors">Admin Login</a>
           </div>
         </div>
       </div>

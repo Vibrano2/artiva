@@ -1,174 +1,146 @@
-/**
- * authService.js
- *
- * Used by:
- *   AuthScreen         → verifyFirebaseToken(token, role), verifyPhoneOtp(phone, otp, role)
- *   ArtisanSignupScreen → verifyFirebaseToken(token, 'artisan'), signupArtisan({...})
- */
-
-import { auth, db } from '../config/firebase';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
-import { requireCurrentUser, withoutUndefined } from './firebaseData';
+import { auth } from '../config/firebase';
+import { fetchWithAuth } from './apiConfig';
+import { normalizeLocation } from './normalizers';
 
-const USER_KEY = 'artiva_current_user';
+function publicUser(value = {}) {
+  return {
+    uid: value.uid,
+    first_name: value.first_name || '',
+    last_name: value.last_name || '',
+    email: value.email || auth.currentUser?.email || '',
+    phone: value.phone || value.phone_number || auth.currentUser?.phoneNumber || '',
+    phoneNumber: value.phone_number || value.phone || auth.currentUser?.phoneNumber || '',
+    role: value.role || 'client',
+  };
+}
+
+function persistUser(value) {
+  return publicUser(value);
+}
+
+function fileFrom(value) {
+  return value?.file || value;
+}
 
 export const AuthService = {
-  /**
-   * verifyFirebaseToken(token, role)
-   *
-   * Called after Firebase Auth sign-in (Google, Apple, Phone OTP confirm).
-   * Syncs Firestore users/{uid}, stores user in localStorage.
-   * Returns: { token, user: { uid, first_name, last_name, email, phone, role } }
-   */
+  async login(idToken, role = 'client') {
+    const requestedRole = role === 'artisan' ? 'artisan' : 'client';
+    const response = await fetchWithAuth('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ idToken, role: requestedRole }),
+    });
+    const user = persistUser(response.user || response.data || {});
+    return { user };
+  },
+
   async verifyFirebaseToken(idToken, role = 'client') {
-    return this.syncCurrentUser(role);
+    return this.login(idToken, role);
   },
 
-  /**
-   * verifyPhoneOtp(phone, otp, role)
-   *
-   * Fallback path when Firebase confirmationResult is unavailable.
-   * In real usage Firebase phone auth handles this client-side.
-   */
-  async verifyPhoneOtp(phone, otp, role = 'client') {
-    throw new Error('Phone verification must be completed through Firebase Authentication.');
-  },
-
-  /**
-   * signupArtisan(data)
-   *
-   * Called by ArtisanSignupScreen on final step submission.
-   * Creates artisanProfiles/{uid} and privateArtisans/{uid} documents.
-   * Returns: { success, artisanId, user }
-   */
-  async signupArtisan(data) {
-    const user = requireCurrentUser();
-
-    const profile = withoutUndefined({
-      uid: user.uid,
-      first_name: data.first_name || 'Artisan',
-      last_name: data.last_name || 'Professional',
-      phone: data.phone || user.phoneNumber || '',
-      trade: data.trade || 'Plumbing',
-      location:
-        typeof data.location === 'object'
-          ? data.location.address || data.location.city || 'Life Camp, Abuja'
-          : data.location || 'Life Camp, Abuja',
-      services: data.services || data.skills || ['General Maintenance'],
-      skills: data.services || data.skills || ['General Maintenance'],
-      experience_years: Number(data.experience_years) || 0,
-      hourly_rate: Number(data.hourly_rate) || 0,
-      tagline: data.tagline || '',
-      work_photos: (data.work_photos || []).filter((p) => typeof p === 'string'),
-      available: true,
-      isVerified: false,
-      no_response_flags: 0,
-      reputation_score: 0,
-      completed_jobs: 0,
-      priority_score: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+  async register(idToken, firstName, lastName) {
+    const response = await fetchWithAuth('/api/auth/register/client', {
+      method: 'POST',
+      body: JSON.stringify({
+        idToken,
+        first_name: String(firstName || '').trim(),
+        last_name: String(lastName || '').trim(),
+        role: 'client',
+      }),
     });
-
-    // users/{uid} — role record
-    await setDoc(
-      doc(db, 'users', user.uid),
-      withoutUndefined({
-        uid: user.uid,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        phone: profile.phone,
-        role: 'artisan',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }),
-      { merge: true }
-    );
-
-    // artisanProfiles/{uid} — public
-    await setDoc(doc(db, 'artisanProfiles', user.uid), profile, { merge: true });
-
-    // privateArtisans/{uid} — NIN + ID doc (admin-only read)
-    await setDoc(
-      doc(db, 'privateArtisans', user.uid),
-      withoutUndefined({
-        uid: user.uid,
-        nin: data.nin || '',
-        idDocumentUrl: data.id_photo || '',
-        updatedAt: serverTimestamp(),
-      }),
-      { merge: true }
-    );
-
-    const synced = await this.syncCurrentUser('artisan', profile);
-    return { success: true, artisanId: user.uid, uid: user.uid, user: synced.user };
+    const user = persistUser(response.data || response.user || {});
+    return { user };
   },
 
-  /**
-   * registerClient({ idToken, first_name, last_name })
-   *
-   * Used by client signup path.
-   */
   async registerClient({ idToken, first_name, last_name }) {
-    return this.syncCurrentUser('client', { first_name, last_name });
+    return this.register(idToken, first_name, last_name);
   },
 
-  /**
-   * getMe() — re-sync current user from Firestore.
-   */
-  async getMe() {
-    return this.syncCurrentUser();
-  },
+  async registerArtisan(data) {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser?.uid || !firebaseUser.phoneNumber) {
+      throw new Error('A verified phone sign-in is required before artisan registration.');
+    }
 
-  logout() {
-    localStorage.removeItem(USER_KEY);
-    return signOut(auth);
-  },
+    const idDocument = fileFrom(data.id_document || data.id_photo);
+    const workPhotos = (data.work_photos || []).map(fileFrom).filter((file) => file instanceof File);
+    if (!(idDocument instanceof File)) throw new Error('A valid identity document is required.');
+    if (workPhotos.length < 3 || workPhotos.length > 5) {
+      throw new Error('Upload between 3 and 5 work photos.');
+    }
+    if (!data.bank_details?.account_name || !data.bank_details?.account_number || !data.bank_details?.bank_code) {
+      throw new Error('A verified payout account is required.');
+    }
 
-  getCurrentUser() {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  },
+    const payload = {
+      first_name: String(data.first_name || '').trim(),
+      last_name: String(data.last_name || '').trim(),
+      phone: firebaseUser.phoneNumber,
+      trade: data.trade,
+      location: normalizeLocation(data.location),
+      tagline: String(data.tagline || '').trim(),
+      experience_years: Number(data.experience_years || 0),
+      hourly_rate: Number(data.hourly_rate || 0),
+      services: data.services || data.skills || [],
+      nin: String(data.nin || ''),
+      bank_details: {
+        account_name: data.bank_details.account_name,
+        account_number: data.bank_details.account_number,
+        bank_code: data.bank_details.bank_code,
+      },
+    };
 
-  /**
-   * syncCurrentUser(requestedRole, updates)
-   *
-   * Reads/writes users/{uid}, merges with Firebase Auth data, caches to localStorage.
-   * Returns: { token, user }
-   */
-  async syncCurrentUser(requestedRole = 'client', updates = {}) {
-    const user = requireCurrentUser();
-    const userRef = doc(db, 'users', user.uid);
-    const existing = await getDoc(userRef);
-    const profile = existing.exists() ? existing.data() : {};
+    const response = await fetchWithAuth('/api/artisans', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const profile = response.data?.data || response.data?.profile || response.data || {};
+    const uid = profile.uid || firebaseUser.uid;
 
-    // Preserve existing role; only upgrade to artisan/admin if explicitly requested
-    const role = profile.role || (requestedRole === 'artisan' ? 'artisan' : 'client');
-
-    const storedUser = withoutUndefined({
-      uid: user.uid,
-      first_name: updates.first_name || profile.first_name || user.displayName?.split(' ')[0] || 'User',
-      last_name:
-        updates.last_name ||
-        profile.last_name ||
-        user.displayName?.split(' ').slice(1).join(' ') ||
-        '',
-      email: user.email || profile.email || '',
-      phone: user.phoneNumber || profile.phone || '',
-      phoneNumber: user.phoneNumber || profile.phone || '',
-      role,
-      token: await user.getIdToken(),
+    const idForm = new FormData();
+    idForm.append('file', idDocument);
+    await fetchWithAuth(`/api/artisans/${encodeURIComponent(uid)}/id-document`, {
+      method: 'POST',
+      body: idForm,
     });
 
-    const { token, ...profileFields } = storedUser;
-    await setDoc(
-      userRef,
-      { ...profileFields, createdAt: profile.createdAt || serverTimestamp(), updatedAt: serverTimestamp() },
-      { merge: true }
-    );
+    for (const file of workPhotos) {
+      const photoForm = new FormData();
+      photoForm.append('file', file);
+      await fetchWithAuth(`/api/artisans/${encodeURIComponent(uid)}/photo`, {
+        method: 'POST',
+        body: photoForm,
+      });
+    }
 
-    localStorage.setItem(USER_KEY, JSON.stringify(storedUser));
-    return { token, user: storedUser };
+    return { success: true, artisanId: uid, uid, data: profile };
+  },
+
+  async signupArtisan(data) {
+    return this.registerArtisan(data);
+  },
+
+  async verifyPhoneOtp() {
+    throw new Error('Complete phone verification with the Firebase SMS confirmation first.');
+  },
+
+  async resetPassword(email) {
+    return fetchWithAuth('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: String(email || '').trim() }),
+    });
+  },
+
+  async getMe() {
+    const response = await fetchWithAuth('/api/auth/me');
+    const value = response.user || response.data || {};
+    if (!['client', 'artisan', 'admin'].includes(value.role)) {
+      throw new Error('Account setup is incomplete.');
+    }
+    return persistUser(value);
+  },
+
+  async logout() {
+    await signOut(auth);
   },
 };
